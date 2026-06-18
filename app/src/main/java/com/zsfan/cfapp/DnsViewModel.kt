@@ -14,7 +14,8 @@ data class DnsUiState(
     val zones: List<Zone> = emptyList(),
     val records: List<DnsRecord> = emptyList(),
     val selectedZoneId: String = "",
-    val selectedRecordId: String = ""
+    val selectedRecordId: String = "",
+    val searchQuery: String = ""
 ) {
     val selectedRecord: DnsRecord?
         get() = records.firstOrNull { it.id == selectedRecordId }
@@ -91,6 +92,10 @@ class DnsViewModel : ViewModel() {
                 _ui.value = _ui.value.copy(loading = false, error = e.message ?: "Update DNS failed")
             }
         }
+    }
+
+    fun setSearchQuery(query: String) {
+        _ui.value = _ui.value.copy(searchQuery = query)
     }
 
     fun deleteRecord(token: String, zoneId: String, recordId: String) {

@@ -89,6 +89,13 @@ class CloudflareRepository {
         }
     }
 
+    fun searchDnsRecords(token: String, zoneId: String, query: String): List<DnsRecord> {
+        val all = loadDnsRecords(token, zoneId)
+        if (query.isBlank()) return all
+        val q = query.trim().lowercase()
+        return all.filter { r -> listOfNotNull(r.id, r.type, r.name, r.content).any { it.lowercase().contains(q) } }
+    }
+
     fun createDnsRecord(token: String, zoneId: String, input: DnsRecordInput) {
         val payload = JSONObject().put("type", input.type).put("name", input.name).put("content", input.content).put("ttl", input.ttl)
         if (input.proxied != null) payload.put("proxied", input.proxied)

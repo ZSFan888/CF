@@ -54,6 +54,7 @@ small,.muted{color:var(--muted)}.row{display:flex;justify-content:space-between;
       <select id="dnsType" class="select">
         <option>A</option><option>AAAA</option><option>CNAME</option><option>TXT</option>
       </select>
+      <input id="dnsSearch" class="input" placeholder="搜索 DNS 记录" oninput="window.CFApp.onDnsSearch(this.value)">
       <input id="dnsName" class="input" placeholder="Name，例如 blog 或 @">
       <textarea id="dnsContent" class="textarea" placeholder="Content，例如 IP、目标域名或 TXT 文本"></textarea>
       <input id="dnsTtl" class="input" type="number" min="1" value="1" placeholder="TTL，1 表示 Auto">
@@ -68,7 +69,8 @@ small,.muted{color:var(--muted)}.row{display:flex;justify-content:space-between;
     </div>
     <div class="card">
       <div class="row"><span>Analytics</span><strong id="analyticsCount">0</strong></div>
-      <div id="analytics" class="list"></div>
+      <div id="analyticsBars" class="list"></div>
+      <div id="analytics" class="list" style="margin-top:12px"></div>
     </div>
   </div>
 <script>
@@ -113,7 +115,11 @@ Proxy: ${detail.proxied ? 'Proxied' : 'DNS only'}` : '选择一条记录查看�
   setAnalytics(payload){
     const points = payload.points || [];
     document.getElementById('analyticsCount').textContent = String(points.length);
+    document.getElementById('analyticsBars').innerHTML = payload.bars || '<div class="item muted">暂无 analytics 数据</div>';
     document.getElementById('analytics').innerHTML = points.map(p => `<div class="item"><div class="row"><strong>${p.date||'-'}</strong><span class="muted">${p.requests} req</span></div><div class="row"><span class="muted">bytes ${p.bytes}</span><span class="muted">cached ${p.cachedRequests}</span></div><div class="row"><span class="muted">threats ${p.threats}</span></div></div>`).join('') || `<div class="item muted">${payload.error || '暂无 analytics 数据'}</div>`;
+  },
+  onDnsSearch(value){
+    window.CFBridge?.setDnsSearchQuery(value);
   },
   loadSelectedIntoForm(){
     const r = window.__selectedRecord;

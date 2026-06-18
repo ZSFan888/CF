@@ -98,7 +98,7 @@ class MainActivity : ComponentActivity() {
                 val recordsJson = state.records.joinToString(prefix = "[", postfix = "]") { "{id:'${escape(it.id.orEmpty())}',name:'${escape(it.name.orEmpty())}',type:'${escape(it.type.orEmpty())}',content:'${escape(it.content.orEmpty())}',proxied:${it.proxied == true},ttl:${it.ttl ?: 0}}" }
                 val selected = state.selectedRecord
                 val selectedJson = if (selected == null) "null" else "{id:'${escape(selected.id.orEmpty())}',name:'${escape(selected.name.orEmpty())}',type:'${escape(selected.type.orEmpty())}',content:'${escape(selected.content.orEmpty())}',proxied:${selected.proxied == true},ttl:${selected.ttl ?: 0}}"
-                val js = "window.CFApp?.setDns({zones:$zonesJson,records:$recordsJson,selectedZoneId:'${escape(state.selectedZoneId)}',selectedRecord:$selectedJson,error:'${escape(state.error)}'})"
+                val js = "window.CFApp?.setDns({zones:$zonesJson,records:$recordsJson,selectedZoneId:'${escape(state.selectedZoneId)}',selectedRecord:$selectedJson,error:'${escape(state.error)}',searchQuery:'${escape(state.searchQuery)}'})"
                 binding.webView.evaluateJavascript(js, null)
             }
         }
@@ -154,6 +154,10 @@ class MainActivity : ComponentActivity() {
         dnsVm.updateRecord(token, zoneId, recordId, parseDnsInput(payload))
     }
 
+    fun setDnsSearchQuery(query: String) {
+        dnsVm.setSearchQuery(query)
+    }
+
     fun deleteDnsRecord(recordId: String) {
         val token = TokenStore(this).get()
         val zoneId = dnsVm.ui.value.selectedZoneId
@@ -206,8 +210,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun escape(value: String): String = value
-        .replace("\\", "\\\\")
-        .replace("'", "\\'")
+        .replace("\", "\\")
+        .replace("'", "\'")
 
     private fun toJsTemplate(value: String): String = JSONObject.quote(value)
 }
