@@ -230,9 +230,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun escape(value: String): String = value
-        .replace("\", "\")
-        .replace("'", "\'")
+    private fun escape(value: String): String {
+        return value
+            .replace("\\", "\\\\")
+            .replace("'", "\\'")
+    }
 
     private fun toJsTemplate(value: String): String = JSONObject.quote(value)
 }
