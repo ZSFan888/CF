@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Bundle
+import android.view.View
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -30,48 +31,55 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (TokenStore(this).get().isBlank()) {
-            openConnect()
-            finish()
-            return
-        }
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        binding.errorMessage.text = "仅允许加载本地控制台页面。"
-        pagesVm = ViewModelProvider(this)[PagesViewModel::class.java]
-        dnsVm = ViewModelProvider(this)[DnsViewModel::class.java]
-        analyticsVm = ViewModelProvider(this)[AnalyticsViewModel::class.java]
-        attachObservers()
-
-        val web = binding.webView
-        web.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            allowFileAccess = true
-            allowContentAccess = false
-            mediaPlaybackRequiresUserGesture = false
-        }
-        web.addJavascriptInterface(CFBridge(this, web, picker), "CFBridge")
-        web.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = !request.url.toString().startsWith("file:///android_asset/")
-            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-                val url = request.url.toString()
-                return if (url.startsWith("file:///android_asset/")) null else WebResourceResponse("text/plain", "utf-8", 403, "Blocked", mapOf(), null)
+        binding.errorTitle.text = "控制台启动失败"
+        binding.errorMessage.text = "正在初始化…"
+        runCatching {
+            val token = TokenStore(this).get()
+            if (token.isBlank()) {
+                openConnect()
+                finish()
+                return
             }
-            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) { binding.progressBar.isVisible = true }
-            override fun onPageFinished(view: WebView?, url: String?) {
-                binding.progressBar.isVisible = false
-                syncSessionIntoConsole()
-                bootstrapPages()
-                bootstrapDns()
-            }
-        }
-        web.webChromeClient = WebChromeClient()
+            pagesVm = ViewModelProvider(this)[PagesViewModel::class.java]
+            dnsVm = ViewModelProvider(this)[DnsViewModel::class.java]
+            analyticsVm = ViewModelProvider(this)[AnalyticsViewModel::class.java]
+            attachObservers()
 
-        lifecycleScope.launch {
-            val theme = ThemeStore(this@MainActivity).theme.first()
-            loadConsole()
-            web.post { web.evaluateJavascript("window.CFApp?.setTheme('$theme')", null) }
+            val web = binding.webView
+            web.settings.apply {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                allowFileAccess = true
+                allowContentAccess = false
+                mediaPlaybackRequiresUserGesture = false
+            }
+            web.addJavascriptInterface(CFBridge(this, web, picker), "CFBridge")
+            web.webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = !request.url.toString().startsWith("file:///android_asset/")
+                override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+                    val url = request.url.toString()
+                    return if (url.startsWith("file:///android_asset/")) null else WebResourceResponse("text/plain", "utf-8", 403, "Blocked", mapOf(), null)
+                }
+                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) { binding.progressBar.isVisible = true }
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    binding.progressBar.isVisible = false
+                    syncSessionIntoConsole()
+                    bootstrapPages()
+                    bootstrapDns()
+                    showConsole()
+                }
+            }
+            web.webChromeClient = WebChromeClient()
+
+            lifecycleScope.launch {
+                val theme = ThemeStore(this@MainActivity).theme.first()
+                loadConsole()
+                web.post { web.evaluateJavascript("window.CFApp?.setTheme('$theme')", null) }
+            }
+        }.onFailure { e ->
+            showFatalError(e.message ?: "未知错误")
         }
     }
 
@@ -142,26 +150,26 @@ class MainActivity : ComponentActivity() {
     fun selectRecord(recordId: String) { dnsVm.selectRecord(recordId) }
 
     fun createDnsRecord(payload: String) {
-        val token = TokenStore(this).get()
-        val zoneId = dnsVm.ui.value.selectedZoneId
-        if (token.isBlank() || zoneId.isBlank()) return
-        dnsVm.createRecord(token, zoneId, parseDnsInput(payload))
+        runCatching {
+            val token = TokenStore(this).get()
+            val zoneId = dnsVm.ui.value.selectedZoneId
+            if (token.isBlank() || zoneId.isBlank()) return
+            dnsVm.createRecord(token, zoneId, parseDnsInput(payload))
+        }.onFailure { binding.errorMessage.text = it.message ?: "创建记录失败" }
     }
 
     fun updateDnsRecord(recordId: String, payload: String) {
-        val token = TokenStore(this).get()
-        val zoneId = dnsVm.ui.value.selectedZoneId
-        if (token.isBlank() || zoneId.isBlank() || recordId.isBlank()) return
-        dnsVm.updateRecord(token, zoneId, recordId, parseDnsInput(payload))
+        runCatching {
+            val token = TokenStore(this).get()
+            val zoneId = dnsVm.ui.value.selectedZoneId
+            if (token.isBlank() || zoneId.isBlank() || recordId.isBlank()) return
+            dnsVm.updateRecord(token, zoneId, recordId, parseDnsInput(payload))
+        }.onFailure { binding.errorMessage.text = it.message ?: "更新记录失败" }
     }
 
-    fun setDnsSearchQuery(query: String) {
-        dnsVm.setSearchQuery(query)
-    }
+    fun setDnsSearchQuery(query: String) { dnsVm.setSearchQuery(query) }
 
-    fun setAnalyticsTimeRange(range: String) {
-        analyticsVm.setTimeRange(range.toIntOrNull() ?: 7)
-    }
+    fun setAnalyticsTimeRange(range: String) { analyticsVm.setTimeRange(range.toIntOrNull() ?: 7) }
 
     fun deleteDnsRecord(recordId: String) {
         val token = TokenStore(this).get()
@@ -213,6 +221,20 @@ class MainActivity : ComponentActivity() {
             if (token.isNotBlank()) dnsVm.load(token)
         }
     }
+
+    private fun showConsole() {
+        binding.webView.visibility = View.VISIBLE
+        binding.errorView.visibility = View.GONE
+    }
+
+    private fun showFatalError(message: String) {
+        binding.progressBar.isVisible = false
+        binding.webView.visibility = View.GONE
+        binding.errorView.visibility = View.VISIBLE
+        binding.errorTitle.text = "控制台启动失败"
+        binding.errorMessage.text = message
+    }
+
     private fun drawBars(points: List<AnalyticsPoint>): String {
         if (points.isEmpty()) return "<div class=\"item muted\">暂无 analytics 数据</div>"
         val max = points.maxOfOrNull { it.requests }?.coerceAtLeast(1L) ?: 1L
@@ -225,17 +247,12 @@ class MainActivity : ComponentActivity() {
     private fun isIpv4(value: String): Boolean {
         val parts = value.split(".")
         if (parts.size != 4) return false
-        return parts.all { part ->
-            part.isNotBlank() && part.all { it.isDigit() } && part.toIntOrNull() in 0..255
-        }
+        return parts.all { part -> part.isNotBlank() && part.all { it.isDigit() } && part.toIntOrNull() in 0..255 }
     }
 
     private fun escape(value: String): String {
-        return value
-            .replace("\\", "\\\\")
-            .replace("'", "\\'")
+        return value.replace("\", "\\").replace("'", "\'")
     }
 
     private fun toJsTemplate(value: String): String = JSONObject.quote(value)
 }
-
