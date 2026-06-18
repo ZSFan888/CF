@@ -1,0 +1,1263 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cloudflare Client</title>
+  <style>
+    :root, [data-theme="light"] {
+      --color-bg: #f5f5f3;
+      --color-surface: #fbfbfa;
+      --color-surface-2: #f0f0ed;
+      --color-surface-3: #e8e8e4;
+      --color-border: rgba(20, 20, 20, 0.10);
+      --color-border-strong: rgba(20, 20, 20, 0.18);
+      --color-text: #171717;
+      --color-text-muted: #5f5f5b;
+      --color-text-faint: #90908a;
+      --color-primary: #111111;
+      --color-primary-contrast: #ffffff;
+      --color-success: #28543c;
+      --color-warning: #7b5b1e;
+      --color-danger: #7a2f35;
+      --shadow-sm: 0 1px 2px rgba(16,16,16,.05);
+      --shadow-md: 0 10px 30px rgba(16,16,16,.08);
+      --radius-sm: 10px;
+      --radius-md: 14px;
+      --radius-lg: 18px;
+      --radius-xl: 24px;
+      --space-1: .25rem;
+      --space-2: .5rem;
+      --space-3: .75rem;
+      --space-4: 1rem;
+      --space-5: 1.25rem;
+      --space-6: 1.5rem;
+      --space-8: 2rem;
+      --space-10: 2.5rem;
+      --space-12: 3rem;
+      --text-xs: clamp(.75rem,.72rem+.16vw,.8125rem);
+      --text-sm: clamp(.875rem,.84rem+.2vw,.95rem);
+      --text-base: clamp(1rem,.97rem+.2vw,1.0625rem);
+      --text-lg: clamp(1.125rem,1.02rem+.5vw,1.375rem);
+      --text-xl: clamp(1.4rem,1.15rem+1vw,1.95rem);
+      --sidebar-width: 272px;
+      --header-height: 64px;
+      --transition: 180ms cubic-bezier(.16,1,.3,1);
+      --font-body: Inter, "SF Pro Display", ui-sans-serif, system-ui, sans-serif;
+    }
+
+    [data-theme="dark"] {
+      --color-bg: #0e0f10;
+      --color-surface: #151617;
+      --color-surface-2: #1a1c1d;
+      --color-surface-3: #202224;
+      --color-border: rgba(255,255,255,.10);
+      --color-border-strong: rgba(255,255,255,.18);
+      --color-text: #eeeeea;
+      --color-text-muted: #b0b0aa;
+      --color-text-faint: #74746f;
+      --color-primary: #f2f2ef;
+      --color-primary-contrast: #101112;
+      --color-success: #7eb592;
+      --color-warning: #caaa68;
+      --color-danger: #d78e94;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.24);
+      --shadow-md: 0 18px 40px rgba(0,0,0,.34);
+    }
+
+    * { box-sizing: border-box; }
+    html { color-scheme: light dark; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      font-family: var(--font-body);
+      font-size: var(--text-base);
+      color: var(--color-text);
+      background: var(--color-bg);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; text-decoration: none; }
+    img, svg { display: block; max-width: 100%; }
+    table { width: 100%; border-collapse: collapse; }
+    .skip-link {
+      position: absolute; left: var(--space-4); top: -40px; z-index: 100;
+      padding: var(--space-2) var(--space-3); background: var(--color-primary); color: var(--color-primary-contrast);
+      border-radius: var(--radius-sm); transition: top var(--transition);
+    }
+    .skip-link:focus { top: var(--space-4); }
+    :focus-visible {
+      outline: 2px solid var(--color-text);
+      outline-offset: 3px;
+      border-radius: 8px;
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: var(--sidebar-width) 1fr;
+      min-height: 100dvh;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+      padding: var(--space-5);
+      border-right: 1px solid var(--color-border);
+      background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+      backdrop-filter: blur(10px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-2);
+    }
+    .brand-mark {
+      width: 34px; height: 34px;
+      border: 1px solid var(--color-border-strong);
+      border-radius: 11px;
+      display: grid; place-items: center;
+      background: var(--color-surface-2);
+    }
+    .brand-title { font-size: var(--text-sm); font-weight: 700; letter-spacing: .02em; }
+    .brand-subtitle { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px; }
+
+    .sidebar-group { display: grid; gap: var(--space-2); }
+    .sidebar-label {
+      padding: 0 var(--space-2);
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--color-text-faint);
+    }
+    .nav-link {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      padding: .8rem .9rem;
+      border: 1px solid transparent;
+      border-radius: var(--radius-md);
+      background: transparent;
+      color: var(--color-text-muted);
+      transition: background var(--transition), border-color var(--transition), color var(--transition), transform var(--transition);
+    }
+    .nav-link:hover { background: var(--color-surface-2); color: var(--color-text); }
+    .nav-link.active {
+      background: var(--color-surface-2);
+      color: var(--color-text);
+      border-color: var(--color-border);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.02);
+    }
+    .nav-meta {
+      font-size: var(--text-xs);
+      color: var(--color-text-faint);
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--color-surface-3);
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      display: grid;
+      gap: var(--space-3);
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--color-border);
+    }
+
+    .workspace {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: var(--header-height) 1fr;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto;
+      gap: var(--space-4);
+      align-items: center;
+      padding: 0 var(--space-6);
+      border-bottom: 1px solid var(--color-border);
+      background: color-mix(in srgb, var(--color-bg) 90%, transparent);
+      backdrop-filter: blur(10px);
+    }
+
+    .context-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      min-width: 0;
+      overflow: auto hidden;
+      scrollbar-width: none;
+    }
+    .context-row::-webkit-scrollbar { display: none; }
+    .context-pill, .icon-button, .segmented, .select, .field {
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      border-radius: 999px;
+      min-height: 40px;
+      box-shadow: var(--shadow-sm);
+    }
+    .context-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: .6rem;
+      padding: 0 .9rem;
+      font-size: var(--text-sm);
+      white-space: nowrap;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--color-text-faint); }
+    .dot.live { background: var(--color-success); }
+    .dot.warn { background: var(--color-warning); }
+    .topbar-actions { display: flex; align-items: center; gap: var(--space-2); }
+    .icon-button {
+      width: 40px; padding: 0; display: grid; place-items: center;
+      color: var(--color-text-muted);
+      transition: transform var(--transition), background var(--transition), color var(--transition);
+    }
+    .icon-button:hover { transform: translateY(-1px); color: var(--color-text); background: var(--color-surface-2); }
+
+    .page {
+      padding: var(--space-6);
+      display: grid;
+      gap: var(--space-6);
+      align-content: start;
+    }
+    .page-header {
+      display: grid;
+      gap: var(--space-2);
+    }
+    .eyebrow {
+      font-size: var(--text-xs);
+      color: var(--color-text-faint);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    h1 {
+      font-size: var(--text-xl);
+      line-height: 1.08;
+      letter-spacing: -.03em;
+      margin: 0;
+    }
+    .lede {
+      color: var(--color-text-muted);
+      max-width: 72ch;
+      margin: 0;
+    }
+
+    .grid { display: grid; gap: var(--space-4); }
+    .grid.kpis { grid-template-columns: repeat(4, minmax(0,1fr)); }
+    .grid.two { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0,1fr)); }
+
+    .card {
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      padding: var(--space-5);
+      min-width: 0;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+    }
+    .card-title {
+      font-size: var(--text-sm);
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--color-text-faint);
+    }
+    .metric {
+      font-size: clamp(1.5rem,1.3rem+.8vw,2rem);
+      font-weight: 700;
+      letter-spacing: -.04em;
+    }
+    .metric-sub { color: var(--color-text-muted); font-size: var(--text-sm); }
+    .stack { display: grid; gap: var(--space-3); }
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+      align-items: center;
+    }
+    .field, .select {
+      display: inline-flex;
+      align-items: center;
+      gap: .65rem;
+      padding: 0 .95rem;
+      min-width: 0;
+    }
+    .field input, .select select {
+      width: 100%;
+      min-width: 0;
+      border: 0;
+      background: transparent;
+      outline: none;
+      min-height: 38px;
+      padding: 0;
+    }
+    .field.block, .select.block { width: 100%; border-radius: var(--radius-md); }
+    .field.block input, .select.block select { min-height: 46px; }
+
+    .btn {
+      min-height: 40px;
+      padding: 0 .95rem;
+      border-radius: 999px;
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      color: var(--color-text);
+      box-shadow: var(--shadow-sm);
+      transition: transform var(--transition), background var(--transition), border-color var(--transition);
+    }
+    .btn:hover { transform: translateY(-1px); background: var(--color-surface-2); }
+    .btn.primary {
+      background: var(--color-primary);
+      border-color: transparent;
+      color: var(--color-primary-contrast);
+    }
+    .btn.ghost { background: transparent; box-shadow: none; }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .45rem;
+      padding: .35rem .65rem;
+      border-radius: 999px;
+      font-size: var(--text-xs);
+      border: 1px solid var(--color-border);
+      background: var(--color-surface-2);
+      color: var(--color-text-muted);
+    }
+
+    .table-wrap {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: auto;
+      background: var(--color-surface);
+    }
+    th, td {
+      padding: .9rem 1rem;
+      border-bottom: 1px solid var(--color-border);
+      text-align: left;
+      white-space: nowrap;
+      font-size: var(--text-sm);
+    }
+    th { color: var(--color-text-faint); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+    tbody tr:hover { background: var(--color-surface-2); }
+    tbody tr:last-child td { border-bottom: 0; }
+
+    .split-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: var(--space-4);
+      align-items: start;
+    }
+    .panel {
+      position: sticky;
+      top: calc(var(--header-height) + var(--space-4));
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
+      box-shadow: var(--shadow-sm);
+    }
+    .panel h2, .card h2, .card h3 { margin: 0; font-size: var(--text-lg); letter-spacing: -.02em; }
+    .panel p, .card p { margin: 0; color: var(--color-text-muted); }
+
+    .chart {
+      height: 180px;
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0,1fr));
+      align-items: end;
+      gap: .5rem;
+      margin-top: var(--space-4);
+    }
+    .bar {
+      border-radius: 999px 999px 12px 12px;
+      background: linear-gradient(to top, var(--color-text) 0%, color-mix(in srgb, var(--color-text) 64%, transparent) 100%);
+      opacity: .85;
+      min-height: 24px;
+    }
+
+    .preset-list { display: grid; gap: var(--space-3); }
+    .preset {
+      padding: var(--space-4);
+      border-radius: var(--radius-md);
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      display: grid;
+      gap: .35rem;
+    }
+    .preset strong { font-size: var(--text-sm); }
+    .preset code {
+      display: block;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      color: var(--color-text-faint);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .empty {
+      display: grid;
+      gap: var(--space-3);
+      place-items: start;
+      min-height: 220px;
+      align-content: center;
+      padding: var(--space-8);
+    }
+    .empty-mark {
+      width: 48px; height: 48px;
+      display: grid; place-items: center;
+      border-radius: 14px;
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+    }
+
+    .drawer {
+      position: fixed;
+      inset: 0 0 0 auto;
+      width: min(420px, 100vw);
+      transform: translateX(100%);
+      transition: transform var(--transition);
+      background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+      backdrop-filter: blur(18px);
+      border-left: 1px solid var(--color-border);
+      box-shadow: var(--shadow-md);
+      z-index: 50;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+    .drawer.open { transform: translateX(0); }
+    .drawer-header, .drawer-footer {
+      padding: var(--space-5);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .drawer-footer { border-bottom: 0; border-top: 1px solid var(--color-border); }
+    .drawer-body {
+      padding: var(--space-5);
+      overflow: auto;
+      display: grid;
+      gap: var(--space-4);
+      align-content: start;
+    }
+
+    .mobile-bar { display: none; }
+    .toast {
+      position: fixed;
+      left: 50%; bottom: 24px;
+      transform: translate(-50%, 14px);
+      opacity: 0;
+      padding: .8rem 1rem;
+      border-radius: 999px;
+      background: var(--color-primary);
+      color: var(--color-primary-contrast);
+      box-shadow: var(--shadow-md);
+      transition: opacity var(--transition), transform var(--transition);
+      z-index: 60;
+      font-size: var(--text-sm);
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .hidden { display: none !important; }
+
+    @media (max-width: 1100px) {
+      .grid.kpis, .grid.three, .grid.two, .split-layout { grid-template-columns: 1fr; }
+      .panel { position: static; }
+    }
+
+    @media (max-width: 860px) {
+      .app-shell { grid-template-columns: 1fr; }
+      .sidebar {
+        display: none;
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: min(86vw, 320px);
+        z-index: 40;
+        box-shadow: var(--shadow-md);
+      }
+      .sidebar.open { display: flex; }
+      .topbar { padding-inline: var(--space-4); }
+      .page { padding: var(--space-4); }
+      .mobile-bar { display: inline-grid; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到内容</a>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="主导航">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-label="Cloudflare Client 标志">
+            <path d="M4 12h16"></path>
+            <path d="M7 8.5h10"></path>
+            <path d="M7 15.5h10"></path>
+            <path d="M9.5 5h5"></path>
+            <path d="M9.5 19h5"></path>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">Cloudflare Client</div>
+          <div class="brand-subtitle">Foundation Shell</div>
+        </div>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-label">Workspace</div>
+        <button class="nav-link active" data-route="connect"><span>Connect</span><span class="nav-meta">01</span></button>
+        <button class="nav-link" data-route="overview"><span>Overview</span><span class="nav-meta">02</span></button>
+        <button class="nav-link" data-route="dns"><span>DNS</span><span class="nav-meta">03</span></button>
+        <button class="nav-link" data-route="pages"><span>Pages</span><span class="nav-meta">04</span></button>
+        <button class="nav-link" data-route="analytics"><span>Analytics</span><span class="nav-meta">05</span></button>
+        <button class="nav-link" data-route="settings"><span>Settings</span><span class="nav-meta">06</span></button>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-label">Context</div>
+        <div class="card" style="padding: 1rem; border-radius: 16px;">
+          <div class="stack">
+            <div>
+              <div class="card-title">Session</div>
+              <div style="margin-top:8px; font-weight:600;">Memory only</div>
+            </div>
+            <div class="metric-sub">Token 不落盘。适合作为第一阶段原型与壳层。</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="status-badge"><span class="dot" id="tokenDot"></span><span id="tokenStatusText">未连接</span></div>
+        <button class="btn ghost" id="clearSessionBtn">清空当前会话</button>
+      </div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <div class="context-row" aria-label="当前上下文">
+          <button class="icon-button mobile-bar" id="menuBtn" aria-label="打开导航">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </button>
+          <div class="context-pill"><span class="dot" id="contextDot"></span><span id="contextToken">Token: empty</span></div>
+          <div class="context-pill"><span class="dot"></span><span id="contextAccount">Account: none</span></div>
+          <div class="context-pill"><span class="dot"></span><span id="contextZone">Zone: none</span></div>
+          <div class="context-pill"><span class="dot"></span><span id="contextProject">Pages: none</span></div>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-button" id="themeToggle" data-theme-toggle aria-label="切换主题">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          </button>
+          <button class="icon-button" id="quickOpenBtn" aria-label="打开详情">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"></path></svg>
+          </button>
+        </div>
+      </header>
+
+      <main class="page" id="main">
+        <section class="view" data-view="connect">
+          <div class="page-header">
+            <div class="eyebrow">Foundation</div>
+            <h1>先把 Cloudflare 客户端的壳层搭起来</h1>
+            <p class="lede">这个起步版本先解决连接、上下文、导航、模块边界和请求层，不急着把所有业务页一次性做满。</p>
+          </div>
+          <div class="split-layout">
+            <div class="grid two">
+              <section class="card">
+                <div class="card-header">
+                  <div>
+                    <div class="card-title">Connection</div>
+                    <h2>Token 接入</h2>
+                  </div>
+                  <span class="status-badge"><span class="dot" id="verifyBadgeDot"></span><span id="verifyBadgeText">Idle</span></span>
+                </div>
+                <div class="stack">
+                  <label class="field block" aria-label="API Token">
+                    <input id="tokenInput" type="password" placeholder="粘贴 Cloudflare API Token，仅保存在当前内存">
+                  </label>
+                  <label class="select block" aria-label="Transport mode">
+                    <select id="transportModeSelect">
+                      <option value="mock">Mock mode</option>
+                      <option value="proxy">Proxy mode</option>
+                    </select>
+                  </label>
+                  <label class="field block" aria-label="Proxy endpoint">
+                    <input id="proxyEndpointInput" type="text" value="/api/cf" placeholder="/api/cf">
+                  </label>
+                  <div class="toolbar">
+                    <button class="btn primary" id="verifyTokenBtn">Verify token</button>
+                    <button class="btn" id="loadDemoBtn">填充演示数据</button>
+                    <button class="btn ghost" id="seedMockBtn">仅切换到 mock</button>
+                  </div>
+                </div>
+              </section>
+
+              <section class="card">
+                <div class="card-header">
+                  <div>
+                    <div class="card-title">Plan</div>
+                    <h2>模块范围</h2>
+                  </div>
+                </div>
+                <div class="stack">
+                  <div class="row"><span>Auth / Context</span><span class="status-badge">Ready</span></div>
+                  <div class="row"><span>DNS records</span><span class="status-badge">Scaffold</span></div>
+                  <div class="row"><span>Pages projects</span><span class="status-badge">Scaffold</span></div>
+                  <div class="row"><span>Analytics presets</span><span class="status-badge">Scaffold</span></div>
+                </div>
+              </section>
+
+              <section class="card" style="grid-column: 1 / -1;">
+                <div class="card-header">
+                  <div>
+                    <div class="card-title">Architecture</div>
+                    <h2>第一阶段约束</h2>
+                  </div>
+                </div>
+                <div class="grid three">
+                  <div class="preset"><strong>Memory only token</strong><span>先不做本地持久化，降低安全和状态复杂度。</span></div>
+                  <div class="preset"><strong>Proxy first</strong><span>前端只认统一 `/api/cf` 接口，后端可逐步扩充。</span></div>
+                  <div class="preset"><strong>Preset analytics</strong><span>先做预置查询，不先做通用 GraphQL Builder。</span></div>
+                </div>
+              </section>
+            </div>
+
+            <aside class="panel">
+              <div class="stack">
+                <div>
+                  <div class="card-title">Current state</div>
+                  <h2>连接摘要</h2>
+                </div>
+                <p id="connectSummary">当前未连接，建议先用 mock mode 验证布局、列表、抽屉和图表占位是否顺手。</p>
+                <div class="stack">
+                  <div class="row"><span class="metric-sub">Transport</span><strong id="summaryTransport">mock</strong></div>
+                  <div class="row"><span class="metric-sub">Memberships</span><strong id="summaryMemberships">0</strong></div>
+                  <div class="row"><span class="metric-sub">Zones</span><strong id="summaryZones">0</strong></div>
+                  <div class="row"><span class="metric-sub">Projects</span><strong id="summaryProjects">0</strong></div>
+                </div>
+                <button class="btn" id="openNotesBtn">查看下一步</button>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view hidden" data-view="overview">
+          <div class="page-header">
+            <div class="eyebrow">Overview</div>
+            <h1>统一入口与全局上下文</h1>
+            <p class="lede">这里先只放可复用的总览卡片，后续所有模块都复用同一套状态与详情抽屉。</p>
+          </div>
+          <div class="grid kpis" id="overviewKpis"></div>
+          <div class="grid two">
+            <section class="card">
+              <div class="card-header"><div><div class="card-title">Memberships</div><h2>可访问账户</h2></div></div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Name</th><th>Role</th><th>Status</th></tr></thead>
+                  <tbody id="membershipTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+            <section class="card">
+              <div class="card-header"><div><div class="card-title">Recent activity</div><h2>工作区动态</h2></div></div>
+              <div class="stack" id="recentActivityList"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view hidden" data-view="dns">
+          <div class="page-header">
+            <div class="eyebrow">DNS</div>
+            <h1>Zone 与 DNS Records</h1>
+            <p class="lede">第一阶段先把筛选、列表、详情抽屉和创建入口固定下来，具体写操作再逐个接 API。</p>
+          </div>
+          <div class="card">
+            <div class="toolbar">
+              <label class="select"><select id="zoneSelect"></select></label>
+              <label class="field"><input id="dnsSearchInput" type="search" placeholder="搜索 name / type / content"></label>
+              <button class="btn" id="newDnsBtn">新建记录</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Name</th><th>Type</th><th>Content</th><th>Proxy</th><th>TTL</th></tr>
+              </thead>
+              <tbody id="dnsTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="view hidden" data-view="pages">
+          <div class="page-header">
+            <div class="eyebrow">Pages</div>
+            <h1>Projects 与 Deployments</h1>
+            <p class="lede">这里先固定项目列表、部署列表、部署详情三层结构，后续再补重新部署和构建日志跳转。</p>
+          </div>
+          <div class="grid two">
+            <section class="card">
+              <div class="card-header"><div><div class="card-title">Projects</div><h2>Pages 项目</h2></div></div>
+              <div class="stack" id="projectList"></div>
+            </section>
+            <section class="card">
+              <div class="card-header"><div><div class="card-title">Deployments</div><h2>最近部署</h2></div></div>
+              <div class="stack" id="deploymentList"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view hidden" data-view="analytics">
+          <div class="page-header">
+            <div class="eyebrow">Analytics</div>
+            <h1>预置查询与趋势位</h1>
+            <p class="lede">先用预置模板跑通 GraphQL 查询，再决定是否值得继续做自定义查询构建器。</p>
+          </div>
+          <div class="grid two">
+            <section class="card">
+              <div class="card-header"><div><div class="card-title">Presets</div><h2>查询模板</h2></div></div>
+              <div class="preset-list" id="presetList"></div>
+            </section>
+            <section class="card">
+              <div class="card-header"><div><div class="card-title">Trend</div><h2>趋势占位</h2></div></div>
+              <div class="chart" id="trendChart"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view hidden" data-view="settings">
+          <div class="page-header">
+            <div class="eyebrow">Settings</div>
+            <h1>基础配置与扩展位</h1>
+            <p class="lede">后面可以把请求超时、默认时间范围、默认 account、日志开关和高级调试入口收敛到这里。</p>
+          </div>
+          <div class="grid three">
+            <section class="card"><div class="card-header"><div><div class="card-title">Theme</div><h2>亮暗模式</h2></div></div><p>当前主题跟随页面状态，可手动切换。</p></section>
+            <section class="card"><div class="card-header"><div><div class="card-title">Transport</div><h2>请求通道</h2></div></div><p>目前支持 mock 与 proxy 两种模式。</p></section>
+            <section class="card"><div class="card-header"><div><div class="card-title">Security</div><h2>会话边界</h2></div></div><p>Token 仅驻留内存，刷新页面即丢失。</p></section>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <aside class="drawer" id="drawer" aria-label="详情抽屉" aria-hidden="true">
+    <div class="drawer-header">
+      <div class="card-title">Detail</div>
+      <h2 id="drawerTitle">Details</h2>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+    <div class="drawer-footer">
+      <div class="toolbar">
+        <button class="btn" id="drawerCloseBtn">关闭</button>
+        <button class="btn primary" id="drawerPrimaryBtn">确认</button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    (() => {
+      const mockData = {
+        memberships: [
+          { id: 'm_1', account: { id: 'acc_main', name: 'Main Workspace' }, roles: ['Administrator'], status: 'accepted' },
+          { id: 'm_2', account: { id: 'acc_side', name: 'Side Projects' }, roles: ['Member'], status: 'accepted' }
+        ],
+        zones: [
+          { id: 'zone_1', name: 'example.com', status: 'active' },
+          { id: 'zone_2', name: 'edge-tools.dev', status: 'active' }
+        ],
+        dnsRecords: {
+          zone_1: [
+            { id: 'rec_1', name: 'example.com', type: 'A', content: '192.0.2.1', proxied: true, ttl: 1 },
+            { id: 'rec_2', name: 'api.example.com', type: 'CNAME', content: 'worker.example.com', proxied: false, ttl: 300 },
+            { id: 'rec_3', name: '_acme-challenge', type: 'TXT', content: 'cf-validation-token', proxied: false, ttl: 120 }
+          ],
+          zone_2: [
+            { id: 'rec_4', name: 'edge-tools.dev', type: 'A', content: '198.51.100.23', proxied: true, ttl: 1 }
+          ]
+        },
+        projects: [
+          { id: 'proj_1', name: 'docs-console', subdomain: 'docs-console.pages.dev', source: { type: 'github' }, production_branch: 'main', latest_deployment: { id: 'dep_2', stage: 'production', latest_stage: { status: 'success' } } },
+          { id: 'proj_2', name: 'worker-lab', subdomain: 'worker-lab.pages.dev', source: { type: 'github' }, production_branch: 'main', latest_deployment: { id: 'dep_3', stage: 'preview', latest_stage: { status: 'active' } } }
+        ],
+        deployments: {
+          proj_1: [
+            { id: 'dep_1', environment: 'preview', url: 'https://preview.docs-console.pages.dev', latest_stage: { status: 'success' }, created_on: '2026-06-18T10:00:00Z' },
+            { id: 'dep_2', environment: 'production', url: 'https://docs-console.pages.dev', latest_stage: { status: 'success' }, created_on: '2026-06-18T12:00:00Z' }
+          ],
+          proj_2: [
+            { id: 'dep_3', environment: 'preview', url: 'https://preview.worker-lab.pages.dev', latest_stage: { status: 'active' }, created_on: '2026-06-18T14:00:00Z' }
+          ]
+        },
+        analyticsPresets: [
+          {
+            id: 'preset_requests',
+            name: 'HTTP requests trend',
+            description: '按时间范围取请求趋势，适合做概览页主图。',
+            query: 'viewer { zones { httpRequests1dGroups(limit: 7) { dimensions { date } sum { requests } } } }'
+          },
+          {
+            id: 'preset_firewall',
+            name: 'Firewall events summary',
+            description: '按规则动作统计安全事件。',
+            query: 'viewer { zones { firewallEventsAdaptiveGroups(limit: 20) { dimensions { action } count } } }'
+          },
+          {
+            id: 'preset_pages',
+            name: 'Pages project activity',
+            description: '留给 Pages 构建与访问量组合视图。',
+            query: 'viewer { accounts { pagesProjects { name subdomain } } }'
+          }
+        ],
+        activity: [
+          '完成基础导航与 hash 路由。',
+          '切出 DNS / Pages / Analytics 三个模块位。',
+          '把 token 与 transport 模式收敛到统一 state。'
+        ]
+      };
+
+      const state = {
+        theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+        route: location.hash.replace('#/', '') || 'connect',
+        transportMode: 'mock',
+        proxyEndpoint: '/api/cf',
+        token: '',
+        verified: false,
+        memberships: [],
+        zones: [],
+        currentAccountId: '',
+        currentZoneId: '',
+        projects: [],
+        currentProjectId: '',
+        deployments: [],
+        analyticsPresets: mockData.analyticsPresets,
+        activity: mockData.activity,
+        dnsSearch: ''
+      };
+
+      const $ = (selector) => document.querySelector(selector);
+      const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+      const els = {
+        sidebar: $('#sidebar'),
+        drawer: $('#drawer'),
+        drawerTitle: $('#drawerTitle'),
+        drawerBody: $('#drawerBody'),
+        toast: $('#toast'),
+        tokenInput: $('#tokenInput'),
+        verifyTokenBtn: $('#verifyTokenBtn'),
+        verifyBadgeText: $('#verifyBadgeText'),
+        verifyBadgeDot: $('#verifyBadgeDot'),
+        transportModeSelect: $('#transportModeSelect'),
+        proxyEndpointInput: $('#proxyEndpointInput'),
+        membershipTableBody: $('#membershipTableBody'),
+        overviewKpis: $('#overviewKpis'),
+        recentActivityList: $('#recentActivityList'),
+        zoneSelect: $('#zoneSelect'),
+        dnsSearchInput: $('#dnsSearchInput'),
+        dnsTableBody: $('#dnsTableBody'),
+        projectList: $('#projectList'),
+        deploymentList: $('#deploymentList'),
+        presetList: $('#presetList'),
+        trendChart: $('#trendChart'),
+        tokenStatusText: $('#tokenStatusText'),
+        tokenDot: $('#tokenDot'),
+        contextDot: $('#contextDot'),
+        contextToken: $('#contextToken'),
+        contextAccount: $('#contextAccount'),
+        contextZone: $('#contextZone'),
+        contextProject: $('#contextProject'),
+        connectSummary: $('#connectSummary'),
+        summaryTransport: $('#summaryTransport'),
+        summaryMemberships: $('#summaryMemberships'),
+        summaryZones: $('#summaryZones'),
+        summaryProjects: $('#summaryProjects'),
+      };
+
+      const api = {
+        async request(path, options = {}) {
+          if (state.transportMode === 'mock') return null;
+          const headers = new Headers(options.headers || {});
+          if (state.token) headers.set('x-cf-token', state.token);
+          headers.set('content-type', 'application/json');
+          const response = await fetch(`${state.proxyEndpoint}${path}`, { ...options, headers });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return response.json();
+        },
+        async verifyToken() {
+          if (state.transportMode === 'mock') {
+            return { success: true, result: { id: 'mock-token', status: 'active' } };
+          }
+          return this.request('/verify', { method: 'POST', body: JSON.stringify({}) });
+        },
+        async memberships() {
+          if (state.transportMode === 'mock') return { result: mockData.memberships };
+          return this.request('/memberships');
+        },
+        async zones() {
+          if (state.transportMode === 'mock') return { result: mockData.zones };
+          return this.request('/zones');
+        },
+        async dnsRecords(zoneId) {
+          if (state.transportMode === 'mock') return { result: mockData.dnsRecords[zoneId] || [] };
+          return this.request(`/zones/${zoneId}/dns_records`);
+        },
+        async pagesProjects(accountId) {
+          if (state.transportMode === 'mock') return { result: mockData.projects };
+          return this.request(`/accounts/${accountId}/pages/projects`);
+        },
+        async pagesDeployments(accountId, projectName) {
+          if (state.transportMode === 'mock') {
+            const found = mockData.projects.find((item) => item.id === projectName || item.name === projectName);
+            return { result: mockData.deployments[found?.id || ''] || [] };
+          }
+          return this.request(`/accounts/${accountId}/pages/projects/${projectName}/deployments`);
+        },
+        async analyticsPreset() {
+          if (state.transportMode === 'mock') return { result: mockData.analyticsPresets };
+          return { result: state.analyticsPresets };
+        }
+      };
+
+      function setTheme(nextTheme) {
+        state.theme = nextTheme;
+        document.documentElement.setAttribute('data-theme', nextTheme);
+        $('#themeToggle').innerHTML = nextTheme === 'dark'
+          ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2v2.2M12 19.8V22M4.93 4.93l1.56 1.56M17.5 17.5l1.57 1.57M2 12h2.2M19.8 12H22M4.93 19.07l1.56-1.56M17.5 6.5l1.57-1.57"></path></svg>'
+          : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+      }
+
+      function showToast(message) {
+        els.toast.textContent = message;
+        els.toast.classList.add('show');
+        clearTimeout(showToast.timer);
+        showToast.timer = setTimeout(() => els.toast.classList.remove('show'), 2200);
+      }
+
+      function openDrawer(title, content) {
+        els.drawerTitle.textContent = title;
+        els.drawerBody.innerHTML = content;
+        els.drawer.classList.add('open');
+        els.drawer.setAttribute('aria-hidden', 'false');
+      }
+      function closeDrawer() {
+        els.drawer.classList.remove('open');
+        els.drawer.setAttribute('aria-hidden', 'true');
+      }
+
+      function routeTo(route) {
+        state.route = route;
+        history.replaceState(null, '', `#/${route}`);
+        renderRoute();
+      }
+
+      function renderRoute() {
+        $$('.view').forEach((view) => view.classList.toggle('hidden', view.dataset.view !== state.route));
+        $$('.nav-link').forEach((item) => item.classList.toggle('active', item.dataset.route === state.route));
+      }
+
+      function renderContext() {
+        els.contextToken.textContent = `Token: ${state.verified ? 'verified' : 'empty'}`;
+        els.contextAccount.textContent = `Account: ${state.currentAccountId || 'none'}`;
+        const currentZone = state.zones.find((item) => item.id === state.currentZoneId)?.name || 'none';
+        els.contextZone.textContent = `Zone: ${currentZone}`;
+        const currentProject = state.projects.find((item) => item.id === state.currentProjectId)?.name || 'none';
+        els.contextProject.textContent = `Pages: ${currentProject}`;
+        const connected = state.verified || state.transportMode === 'mock';
+        [els.contextDot, els.tokenDot].forEach((dot) => dot.className = `dot ${connected ? 'live' : ''}`.trim());
+        els.tokenStatusText.textContent = connected ? '已准备' : '未连接';
+        els.summaryTransport.textContent = state.transportMode;
+        els.summaryMemberships.textContent = String(state.memberships.length);
+        els.summaryZones.textContent = String(state.zones.length);
+        els.summaryProjects.textContent = String(state.projects.length);
+        els.connectSummary.textContent = connected
+          ? '基础壳层已经具备工作区上下文、列表容器和抽屉结构，可以继续往真实 API 接口推进。'
+          : '当前未连接，建议先用 mock mode 验证布局、列表、抽屉和图表占位是否顺手。';
+      }
+
+      function renderOverview() {
+        const kpis = [
+          ['Memberships', state.memberships.length, '当前 token 可访问账户数'],
+          ['Zones', state.zones.length, 'DNS 模块的主筛选维度'],
+          ['Projects', state.projects.length, 'Pages 项目总数'],
+          ['Presets', state.analyticsPresets.length, 'GraphQL 查询模板数']
+        ];
+        els.overviewKpis.innerHTML = kpis.map(([title, value, desc]) => `
+          <section class="card">
+            <div class="card-header"><div class="card-title">${title}</div></div>
+            <div class="metric">${value}</div>
+            <div class="metric-sub">${desc}</div>
+          </section>
+        `).join('');
+        els.membershipTableBody.innerHTML = state.memberships.map((item) => `
+          <tr>
+            <td>${item.account?.name || '-'}</td>
+            <td>${(item.roles || []).join(', ') || '-'}</td>
+            <td>${item.status || '-'}</td>
+          </tr>
+        `).join('') || '<tr><td colspan="3">暂无数据</td></tr>';
+        els.recentActivityList.innerHTML = state.activity.map((item) => `<div class="preset"><strong>Update</strong><span>${item}</span></div>`).join('');
+      }
+
+      function renderZoneSelect() {
+        els.zoneSelect.innerHTML = state.zones.map((zone) => `<option value="${zone.id}">${zone.name}</option>`).join('') || '<option value="">No zones</option>';
+        if (!state.currentZoneId && state.zones[0]) state.currentZoneId = state.zones[0].id;
+        els.zoneSelect.value = state.currentZoneId;
+      }
+
+      async function renderDnsTable() {
+        renderZoneSelect();
+        if (!state.currentZoneId) {
+          els.dnsTableBody.innerHTML = '<tr><td colspan="5">暂无 Zone</td></tr>';
+          return;
+        }
+        const result = await api.dnsRecords(state.currentZoneId);
+        const rows = (result.result || []).filter((item) => {
+          const keyword = state.dnsSearch.trim().toLowerCase();
+          if (!keyword) return true;
+          return [item.name, item.type, item.content].some((v) => String(v).toLowerCase().includes(keyword));
+        });
+        els.dnsTableBody.innerHTML = rows.map((item) => `
+          <tr data-dns-id="${item.id}">
+            <td>${item.name}</td>
+            <td>${item.type}</td>
+            <td class="mono">${item.content}</td>
+            <td>${item.proxied ? 'On' : 'Off'}</td>
+            <td>${item.ttl}</td>
+          </tr>
+        `).join('') || '<tr><td colspan="5">没有匹配结果</td></tr>';
+      }
+
+      function renderPages() {
+        els.projectList.innerHTML = state.projects.map((item) => `
+          <button class="preset" data-project-id="${item.id}">
+            <strong>${item.name}</strong>
+            <span>${item.subdomain}</span>
+            <span class="metric-sub">branch: ${item.production_branch || '-'}</span>
+          </button>
+        `).join('') || '<div class="empty"><div class="empty-mark">-</div><p>暂无项目</p></div>';
+        els.deploymentList.innerHTML = state.deployments.map((item) => `
+          <div class="preset">
+            <strong>${item.environment}</strong>
+            <span>${item.latest_stage?.status || '-'}</span>
+            <code>${item.url}</code>
+          </div>
+        `).join('') || '<div class="empty"><div class="empty-mark">-</div><p>请先选择项目</p></div>';
+      }
+
+      function renderAnalytics() {
+        els.presetList.innerHTML = state.analyticsPresets.map((item) => `
+          <button class="preset" data-preset-id="${item.id}">
+            <strong>${item.name}</strong>
+            <span>${item.description}</span>
+            <code>${item.query}</code>
+          </button>
+        `).join('');
+        const bars = [42, 60, 54, 72, 80, 66, 74, 86, 58, 62, 76, 90];
+        els.trendChart.innerHTML = bars.map((value) => `<div class="bar" style="height:${value}%"></div>`).join('');
+      }
+
+      async function hydrateWorkspace() {
+        const memberships = await api.memberships();
+        state.memberships = memberships.result || [];
+        if (!state.currentAccountId) state.currentAccountId = state.memberships[0]?.account?.id || '';
+
+        const zones = await api.zones();
+        state.zones = zones.result || [];
+        if (!state.currentZoneId) state.currentZoneId = state.zones[0]?.id || '';
+
+        const pages = await api.pagesProjects(state.currentAccountId);
+        state.projects = pages.result || [];
+        if (!state.currentProjectId) state.currentProjectId = state.projects[0]?.id || '';
+
+        const currentProject = state.projects.find((item) => item.id === state.currentProjectId);
+        const deployments = currentProject ? await api.pagesDeployments(state.currentAccountId, currentProject.name) : { result: [] };
+        state.deployments = deployments.result || [];
+
+        renderContext();
+        renderOverview();
+        await renderDnsTable();
+        renderPages();
+        renderAnalytics();
+      }
+
+      async function verifyToken() {
+        try {
+          els.verifyBadgeText.textContent = 'Verifying';
+          els.verifyBadgeDot.className = 'dot warn';
+          state.token = els.tokenInput.value.trim();
+          state.transportMode = els.transportModeSelect.value;
+          state.proxyEndpoint = els.proxyEndpointInput.value.trim() || '/api/cf';
+          if (state.transportMode === 'proxy' && !state.token) throw new Error('请先粘贴 Token');
+          await api.verifyToken();
+          state.verified = true;
+          els.verifyBadgeText.textContent = 'Ready';
+          els.verifyBadgeDot.className = 'dot live';
+          await hydrateWorkspace();
+          routeTo('overview');
+          showToast('基础框架已进入可扩展状态');
+        } catch (error) {
+          state.verified = false;
+          els.verifyBadgeText.textContent = 'Failed';
+          els.verifyBadgeDot.className = 'dot';
+          showToast(error.message || '连接失败');
+          renderContext();
+        }
+      }
+
+      function seedDemo() {
+        state.transportMode = 'mock';
+        els.transportModeSelect.value = 'mock';
+        els.tokenInput.value = 'mock-session';
+        state.token = 'mock-session';
+        state.verified = true;
+        hydrateWorkspace().then(() => {
+          routeTo('overview');
+          showToast('已加载演示数据');
+        });
+      }
+
+      function clearSession() {
+        state.token = '';
+        state.verified = false;
+        state.memberships = [];
+        state.zones = [];
+        state.projects = [];
+        state.deployments = [];
+        state.currentAccountId = '';
+        state.currentZoneId = '';
+        state.currentProjectId = '';
+        els.tokenInput.value = '';
+        renderContext();
+        renderOverview();
+        renderZoneSelect();
+        renderPages();
+        renderAnalytics();
+        routeTo('connect');
+        showToast('当前会话已清空');
+      }
+
+      function bindEvents() {
+        $('#themeToggle').addEventListener('click', () => setTheme(state.theme === 'dark' ? 'light' : 'dark'));
+        $('#menuBtn').addEventListener('click', () => els.sidebar.classList.toggle('open'));
+        $('#quickOpenBtn').addEventListener('click', () => openDrawer('Next steps', `
+          <div class="preset"><strong>1. 接入真实 verify</strong><span>先验证 token 与 memberships。</span></div>
+          <div class="preset"><strong>2. 打通 DNS 列表</strong><span>让 zone 与 records 真正联动。</span></div>
+          <div class="preset"><strong>3. Pages 部署详情</strong><span>补齐 deployment detail 与日志跳转。</span></div>
+          <div class="preset"><strong>4. Analytics 预置查询</strong><span>把 GraphQL 结果渲染成真实图表。</span></div>
+        `));
+        $('#drawerCloseBtn').addEventListener('click', closeDrawer);
+        $('#openNotesBtn').addEventListener('click', () => $('#quickOpenBtn').click());
+        $('#verifyTokenBtn').addEventListener('click', verifyToken);
+        $('#loadDemoBtn').addEventListener('click', seedDemo);
+        $('#seedMockBtn').addEventListener('click', () => {
+          state.transportMode = 'mock';
+          els.transportModeSelect.value = 'mock';
+          showToast('已切到 mock mode');
+        });
+        $('#clearSessionBtn').addEventListener('click', clearSession);
+        els.transportModeSelect.addEventListener('change', (event) => {
+          state.transportMode = event.target.value;
+          renderContext();
+        });
+        els.proxyEndpointInput.addEventListener('input', (event) => state.proxyEndpoint = event.target.value.trim());
+        els.dnsSearchInput.addEventListener('input', async (event) => {
+          state.dnsSearch = event.target.value;
+          await renderDnsTable();
+        });
+        els.zoneSelect.addEventListener('change', async (event) => {
+          state.currentZoneId = event.target.value;
+          renderContext();
+          await renderDnsTable();
+        });
+        $('#newDnsBtn').addEventListener('click', () => openDrawer('Create DNS record', `
+          <label class="field block"><input type="text" placeholder="Name"></label>
+          <label class="select block"><select><option>A</option><option>AAAA</option><option>CNAME</option><option>TXT</option></select></label>
+          <label class="field block"><input type="text" placeholder="Content"></label>
+          <label class="field block"><input type="number" placeholder="TTL"></label>
+        `));
+        $$('.nav-link').forEach((btn) => btn.addEventListener('click', () => {
+          routeTo(btn.dataset.route);
+          els.sidebar.classList.remove('open');
+        }));
+        els.projectList.addEventListener('click', async (event) => {
+          const button = event.target.closest('[data-project-id]');
+          if (!button) return;
+          state.currentProjectId = button.dataset.projectId;
+          const project = state.projects.find((item) => item.id === state.currentProjectId);
+          const deployments = await api.pagesDeployments(state.currentAccountId, project?.name || '');
+          state.deployments = deployments.result || [];
+          renderContext();
+          renderPages();
+          openDrawer(project?.name || 'Project', `
+            <div class="preset"><strong>Subdomain</strong><span>${project?.subdomain || '-'}</span></div>
+            <div class="preset"><strong>Source</strong><span>${project?.source?.type || '-'}</span></div>
+            <div class="preset"><strong>Production branch</strong><span>${project?.production_branch || '-'}</span></div>
+          `);
+        });
+        els.presetList.addEventListener('click', (event) => {
+          const button = event.target.closest('[data-preset-id]');
+          if (!button) return;
+          const preset = state.analyticsPresets.find((item) => item.id === button.dataset.presetId);
+          openDrawer(preset?.name || 'Preset', `<div class="preset"><strong>Description</strong><span>${preset?.description || '-'}</span></div><div class="preset"><strong>GraphQL</strong><code>${preset?.query || '-'}</code></div>`);
+        });
+        els.dnsTableBody.addEventListener('click', (event) => {
+          const row = event.target.closest('[data-dns-id]');
+          if (!row) return;
+          const zoneRecords = mockData.dnsRecords[state.currentZoneId] || [];
+          const record = zoneRecords.find((item) => item.id === row.dataset.dnsId);
+          openDrawer(record?.name || 'DNS Record', `
+            <div class="preset"><strong>Type</strong><span>${record?.type || '-'}</span></div>
+            <div class="preset"><strong>Content</strong><code>${record?.content || '-'}</code></div>
+            <div class="preset"><strong>Proxy</strong><span>${record?.proxied ? 'On' : 'Off'}</span></div>
+            <div class="preset"><strong>TTL</strong><span>${record?.ttl || '-'}</span></div>
+          `);
+        });
+        window.addEventListener('hashchange', () => {
+          state.route = location.hash.replace('#/', '') || 'connect';
+          renderRoute();
+        });
+      }
+
+      setTheme(state.theme);
+      bindEvents();
+      renderRoute();
+      renderContext();
+      renderOverview();
+      renderAnalytics();
+      renderZoneSelect();
+      renderPages();
+    })();
+  </script>
+</body>
+</html>
