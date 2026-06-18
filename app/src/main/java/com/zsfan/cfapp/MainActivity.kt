@@ -249,9 +249,16 @@ class MainActivity : ComponentActivity() {
         if (parts.size != 4) return false
         return parts.all { part -> part.isNotBlank() && part.all { it.isDigit() } && part.toIntOrNull() in 0..255 }
     }
-
     private fun escape(value: String): String {
-        return value.replace("\", "\\").replace("'", "\'")
+        val sb = StringBuilder(value.length)
+        value.forEach { ch ->
+            when (ch) {
+                '\' -> sb.append("\")
+                ''' -> sb.append("\'")
+                else -> sb.append(ch)
+            }
+        }
+        return sb.toString()
     }
 
     private fun toJsTemplate(value: String): String = JSONObject.quote(value)
