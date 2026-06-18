@@ -8,8 +8,8 @@ Cloudflare third-party Android client foundation.
 - Encrypted token storage.
 - Local WebView console shell with restricted asset-only loading.
 - Pages project list, deployment list, and deployment log viewer.
-- Zone list, DNS records, DNS record detail panel, DNS create, DNS edit, DNS delete, and DNS search.
-- Analytics preset query using GraphQL with simple chart rendering.
+- Zone list, DNS records, DNS record detail panel, DNS create, DNS edit, DNS delete, DNS search, type filter, and sort.
+- Analytics preset query using GraphQL with chart rendering and time range selection.
 
 ## Main files
 - `CloudflareRepository.kt`
@@ -22,5 +22,5 @@ Cloudflare third-party Android client foundation.
 
 ## Next step
 - Add richer Pages deployment actions.
-- Improve analytics filtering and time range selection.
-- Add DNS sort and record-type chips.
+- Add analytics dimension filtering.
+- Add DNS record tags display.

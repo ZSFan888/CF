@@ -11,7 +11,8 @@ import kotlinx.coroutines.withContext
 data class AnalyticsUiState(
     val loading: Boolean = false,
     val error: String = "",
-    val points: List<AnalyticsPoint> = emptyList()
+    val points: List<AnalyticsPoint> = emptyList(),
+    val timeRange: Int = 7
 )
 
 class AnalyticsViewModel : ViewModel() {
@@ -26,10 +27,17 @@ class AnalyticsViewModel : ViewModel() {
             runCatching {
                 withContext(Dispatchers.IO) { repo.loadHttpRequestsTrend(token, zoneId) }
             }.onSuccess { points ->
-                _ui.value = AnalyticsUiState(loading = false, points = points)
+                _ui.value = AnalyticsUiState(loading = false, points = points, timeRange = 7)
             }.onFailure { e ->
                 _ui.value = AnalyticsUiState(loading = false, error = e.message ?: "Analytics load failed")
             }
+        }
+    }
+
+    fun setTimeRange(range: Int) {
+        _ui.value = _ui.value.copy(timeRange = range)
+        if (_ui.value.selectedZoneId.isNotBlank()) {
+            load(_ui.value.selectedZoneId, _ui.value.selectedZoneId)
         }
     }
 }

@@ -24,6 +24,7 @@ class CFBridge(
     @JavascriptInterface fun createDnsRecord(payload: String) { activity.runOnUiThread { activity.createDnsRecord(payload) } }
     @JavascriptInterface fun updateDnsRecord(recordId: String, payload: String) { activity.runOnUiThread { activity.updateDnsRecord(recordId, payload) } }
     @JavascriptInterface fun setDnsSearchQuery(query: String) { activity.runOnUiThread { activity.setDnsSearchQuery(query) } }
+    @JavascriptInterface fun setAnalyticsTimeRange(range: String) { activity.runOnUiThread { activity.setAnalyticsTimeRange(range) } }
     @JavascriptInterface fun deleteDnsRecord(recordId: String) { activity.runOnUiThread { activity.deleteDnsRecord(recordId) } }
     @JavascriptInterface fun pickFile() { activity.runOnUiThread { picker.launch("*/*") } }
 

@@ -55,6 +55,7 @@ small,.muted{color:var(--muted)}.row{display:flex;justify-content:space-between;
         <option>A</option><option>AAAA</option><option>CNAME</option><option>TXT</option>
       </select>
       <input id="dnsSearch" class="input" placeholder="搜索 DNS 记录" oninput="window.CFApp.onDnsSearch(this.value)">
+      <input id="dnsTypeChip" class="input" placeholder="类型筛选：A / AAAA / CNAME / TXT" oninput="window.CFApp.onDnsType(this.value)">
       <input id="dnsName" class="input" placeholder="Name，例如 blog 或 @">
       <textarea id="dnsContent" class="textarea" placeholder="Content，例如 IP、目标域名或 TXT 文本"></textarea>
       <input id="dnsTtl" class="input" type="number" min="1" value="1" placeholder="TTL，1 表示 Auto">
@@ -68,7 +69,7 @@ small,.muted{color:var(--muted)}.row{display:flex;justify-content:space-between;
       <div class="pre" id="dnsFormHint">支持 A / AAAA / CNAME / TXT。TTL 为 1 时表示 Auto。</div>
     </div>
     <div class="card">
-      <div class="row"><span>Analytics</span><strong id="analyticsCount">0</strong></div>
+      <div class="row"><select id="analyticsTimeSelect" class="select" style="margin-right:8px" onchange="window.CFBridge?.setAnalyticsTimeRange(this.value)"><option value="7">7 天</option><option value="14">14 天</option><option value="30">30 天</option></select><span>Analytics</span><strong id="analyticsCount">0</strong></div>
       <div id="analyticsBars" class="list"></div>
       <div id="analytics" class="list" style="margin-top:12px"></div>
     </div>

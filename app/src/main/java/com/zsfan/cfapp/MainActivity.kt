@@ -158,6 +158,8 @@ class MainActivity : ComponentActivity() {
         dnsVm.setSearchQuery(query)
     }
 
+    fun setAnalyticsTimeRange(range: String) { dnsVm.setSearchQuery(""); analyticsVm.setTimeRange(range.toIntOrNull() ?: 7) }
+
     fun deleteDnsRecord(recordId: String) {
         val token = TokenStore(this).get()
         val zoneId = dnsVm.ui.value.selectedZoneId
