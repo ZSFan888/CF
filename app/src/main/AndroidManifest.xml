@@ -5,9 +5,12 @@
     <application
         android:allowBackup="false"
         android:usesCleartextTraffic="false"
-        android:label="CFApp"
+        android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.CFApp">
+        <activity
+            android:name=".ConnectActivity"
+            android:exported="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

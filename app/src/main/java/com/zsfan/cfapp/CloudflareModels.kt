@@ -1,0 +1,17 @@
+package com.zsfan.cfapp
+
+data class VerifyEnvelope(val success: Boolean, val result: VerifyResult?)
+data class VerifyResult(val id: String? = null, val status: String? = null, val expires_on: String? = null, val not_before: String? = null)
+data class MembershipEnvelope(val success: Boolean, val result: List<Membership>?)
+data class Membership(val id: String? = null, val status: String? = null, val roles: List<String>? = null, val account: AccountRef? = null)
+data class AccountRef(val id: String? = null, val name: String? = null)
+data class PagesProjectsEnvelope(val success: Boolean, val result: List<PagesProject>?)
+data class PagesProject(val id: String? = null, val name: String? = null, val subdomain: String? = null, val production_branch: String? = null)
+data class PagesDeploymentsEnvelope(val success: Boolean, val result: List<PagesDeployment>?)
+data class PagesDeployment(val id: String? = null, val environment: String? = null, val url: String? = null, val created_on: String? = null, val latest_stage: DeploymentStage? = null)
+data class DeploymentStage(val status: String? = null)
+data class ZonesEnvelope(val success: Boolean, val result: List<Zone>?)
+data class Zone(val id: String? = null, val name: String? = null, val status: String? = null)
+data class DnsRecordsEnvelope(val success: Boolean, val result: List<DnsRecord>?)
+data class DnsRecord(val id: String? = null, val type: String? = null, val name: String? = null, val content: String? = null, val proxied: Boolean? = null, val ttl: Int? = null)
+data class AnalyticsPoint(val date: String, val requests: Long, val bytes: Long, val cachedRequests: Long, val threats: Long)

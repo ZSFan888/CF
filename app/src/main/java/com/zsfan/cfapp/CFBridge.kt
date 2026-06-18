@@ -1,20 +1,44 @@
 package com.zsfan.cfapp
 
 import android.content.Intent
-import android.net.Uri
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.ActivityResultLauncher
 
 class CFBridge(
     private val activity: MainActivity,
     private val webView: WebView,
-    private val picker: androidx.activity.result.ActivityResultLauncher<String>
+    private val picker: ActivityResultLauncher<String>
 ) {
     @JavascriptInterface
     fun requestTheme() {
         val theme = if ((activity.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES) "dark" else "light"
         activity.runOnUiThread { webView.evaluateJavascript("window.CFApp?.setTheme('$theme')", null) }
+    }
+
+    @JavascriptInterface
+    fun openConnect() {
+        activity.runOnUiThread { activity.openConnect() }
+    }
+
+    @JavascriptInterface
+    fun selectProject(projectName: String) {
+        activity.runOnUiThread { activity.selectProject(projectName) }
+    }
+
+    @JavascriptInterface
+    fun selectDeployment(deploymentId: String) {
+        activity.runOnUiThread { activity.selectDeployment(deploymentId) }
+    }
+
+    @JavascriptInterface
+    fun selectZone(zoneId: String) {
+        activity.runOnUiThread { activity.selectZone(zoneId) }
+    }
+
+    @JavascriptInterface
+    fun selectRecord(recordId: String) {
+        activity.runOnUiThread { activity.selectRecord(recordId) }
     }
 
     @JavascriptInterface

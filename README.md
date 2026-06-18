@@ -2,14 +2,26 @@
 
 Cloudflare third-party Android client foundation.
 
-## Structure
-- `app/src/main/assets/console/index.html` - WebView console shell.
-- `MainActivity.kt` - WebView host.
-- `CFBridge.kt` - JS bridge for native features.
-- `TokenStore.kt` - encrypted token storage.
-- `ThemeStore.kt` - theme persistence.
+## Current scope
+- Native connect flow with Cloudflare API token verify.
+- Membership bootstrap for default account context.
+- Encrypted token storage.
+- Local WebView console shell with restricted asset-only loading.
+- Pages project list, deployment list, and deployment log viewer.
+- Zone list, DNS records, and DNS record detail panel.
+- Analytics preset query using GraphQL.
+
+## Main files
+- `ConnectActivity.kt`
+- `AuthViewModel.kt`
+- `CloudflareRepository.kt`
+- `PagesViewModel.kt`
+- `DnsViewModel.kt`
+- `AnalyticsViewModel.kt`
+- `MainActivity.kt`
+- `assets/console/index.html`
 
 ## Next step
-- Connect token verify.
-- Load memberships and account context.
-- Add DNS and Pages modules.
+- Add DNS create/edit flows.
+- Add Pages deployment detail actions.
+- Replace analytics list with chart rendering.

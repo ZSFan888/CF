@@ -5,5 +5,6 @@ class CloudflareApi {
         const val BASE = "https://api.cloudflare.com/client/v4"
         const val VERIFY = "$BASE/user/tokens/verify"
         const val MEMBERSHIPS = "$BASE/memberships"
+        const val GRAPHQL = "$BASE/graphql"
     }
 }

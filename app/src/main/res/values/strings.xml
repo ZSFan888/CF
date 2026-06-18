@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">CFApp</string>
+    <string name="connect_title">连接 Cloudflare</string>
+    <string name="connect_hint">粘贴 API Token</string>
+    <string name="connect_action">验证并继续</string>
+    <string name="connect_clear">清空 Token</string>
 </resources>

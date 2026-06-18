@@ -8,28 +8,93 @@
 :root{--bg:#f5f5f3;--surface:#fbfbfa;--line:rgba(0,0,0,.1);--text:#151515;--muted:#60605a;--accent:#111}
 [data-theme=dark]{--bg:#0f1011;--surface:#17181a;--line:rgba(255,255,255,.1);--text:#efefec;--muted:#a7a7a1;--accent:#f2f2ef}
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text)}
-.wrap{padding:20px;display:grid;gap:16px}.card{border:1px solid var(--line);background:var(--surface);border-radius:16px;padding:16px}.btn{border:1px solid var(--line);background:var(--accent);color:var(--bg);border-radius:999px;padding:10px 14px}
-small{color:var(--muted)}
+.wrap{padding:20px;display:grid;gap:16px}.card{border:1px solid var(--line);background:var(--surface);border-radius:16px;padding:16px}.btn{border:1px solid var(--line);background:var(--accent);color:var(--bg);border-radius:999px;padding:10px 14px}.btn.secondary{background:transparent;color:var(--text)}
+small,.muted{color:var(--muted)}.row{display:flex;justify-content:space-between;gap:12px;align-items:center}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.list{display:grid;gap:10px;margin-top:12px}.item{padding:12px;border:1px solid var(--line);border-radius:14px;background:rgba(0,0,0,.02);text-align:left}[data-theme=dark] .item{background:rgba(255,255,255,.03)}
+.select{width:100%;margin-top:12px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--text)}.pre{white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.5;border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:12px;background:rgba(0,0,0,.02)}
+[data-theme=dark] .pre{background:rgba(255,255,255,.03)}
 </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
       <h1 style="margin:0 0 8px">CFApp</h1>
-      <small>Android WebView shell for Cloudflare client</small>
+      <small>Android shell for Cloudflare client</small>
     </div>
     <div class="card">
-      <div>Token status: <span id="tokenStatus">not connected</span></div>
-      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <div class="row"><span>连接状态</span><strong id="connected">未连接</strong></div>
+      <div class="row" style="margin-top:10px"><span>Token status</span><span id="tokenStatus" class="muted">unknown</span></div>
+      <div class="row" style="margin-top:10px"><span>Account</span><span id="accountName" class="muted">none</span></div>
+      <div class="row" style="margin-top:10px"><span>Account ID</span><span id="accountId" class="mono muted">-</span></div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn" onclick="window.CFBridge?.requestTheme()">Sync theme</button>
-        <button class="btn" onclick="window.CFBridge?.pickFile()">Pick file</button>
+        <button class="btn secondary" onclick="window.CFBridge?.openConnect()">Reconnect</button>
       </div>
+    </div>
+    <div class="card">
+      <div class="row"><span>Pages Projects</span><strong id="projectCount">0</strong></div>
+      <div id="projects" class="list"></div>
+    </div>
+    <div class="card">
+      <div class="row"><span>Deployments</span><strong id="deploymentCount">0</strong></div>
+      <div id="deployments" class="list"></div>
+      <div class="pre" id="deploymentLogs">选择一个 deployment 查看日志</div>
+    </div>
+    <div class="card">
+      <div class="row"><span>Zones</span><strong id="zoneCount">0</strong></div>
+      <select id="zoneSelect" class="select" onchange="window.CFBridge?.selectZone(this.value)"></select>
+      <div id="zones" class="list"></div>
+    </div>
+    <div class="card">
+      <div class="row"><span>DNS Records</span><strong id="recordCount">0</strong></div>
+      <div id="records" class="list"></div>
+      <div class="pre" id="recordDetail">选择一条记录查看详情</div>
+    </div>
+    <div class="card">
+      <div class="row"><span>Analytics</span><strong id="analyticsCount">0</strong></div>
+      <div id="analytics" class="list"></div>
     </div>
   </div>
 <script>
 window.CFApp = {
   setTheme(theme){ document.documentElement.setAttribute('data-theme', theme); },
-  setTokenStatus(text){ document.getElementById('tokenStatus').textContent = text; }
+  setSession(session){
+    document.getElementById('connected').textContent = session.connected ? '已连接' : '未连接';
+    document.getElementById('tokenStatus').textContent = session.tokenStatus || 'unknown';
+    document.getElementById('accountName').textContent = session.accountName || 'none';
+    document.getElementById('accountId').textContent = session.accountId || '-';
+  },
+  setPages(payload){
+    const projects = payload.projects || [];
+    const deployments = payload.deployments || [];
+    document.getElementById('projectCount').textContent = String(projects.length);
+    document.getElementById('deploymentCount').textContent = String(deployments.length);
+    document.getElementById('projects').innerHTML = projects.map(p => `<button class="item" onclick="window.CFBridge?.selectProject('${String(p.name||'').replace(/'/g, "\'")}')"><div><strong>${p.name||'-'}</strong></div><div class="muted">${p.subdomain||'-'}</div><div class="muted">branch: ${p.production_branch||'-'}</div></button>`).join('') || '<div class="item muted">暂无项目</div>';
+    document.getElementById('deployments').innerHTML = deployments.map(d => `<button class="item" onclick="window.CFBridge?.selectDeployment('${String(d.id||'').replace(/'/g, "\'")}')"><div class="row"><strong>${d.environment||'-'}</strong><span class="muted">${d.status||'-'}</span></div><div class="mono muted">${d.url||'-'}</div><div class="muted">${d.createdOn||'-'}</div></button>`).join('') || '<div class="item muted">暂无部署</div>';
+    document.getElementById('deploymentLogs').textContent = payload.deploymentLogs || '选择一个 deployment 查看日志';
+  },
+  setDns(payload){
+    const zones = payload.zones || [];
+    const records = payload.records || [];
+    document.getElementById('zoneCount').textContent = String(zones.length);
+    document.getElementById('recordCount').textContent = String(records.length);
+    const select = document.getElementById('zoneSelect');
+    select.innerHTML = zones.map(z => `<option value="${z.id}">${z.name||'-'}</option>`).join('') || '<option value="">No zones</option>';
+    if (payload.selectedZoneId) select.value = payload.selectedZoneId;
+    document.getElementById('zones').innerHTML = zones.map(z => `<div class="item"><div><strong>${z.name||'-'}</strong></div><div class="muted">${z.status||'-'}</div><div class="mono muted">${z.id||'-'}</div></div>`).join('') || '<div class="item muted">暂无 Zone</div>';
+    document.getElementById('records').innerHTML = records.map(r => `<button class="item" onclick="window.CFBridge?.selectRecord('${String(r.id||'').replace(/'/g, "\'")}')"><div class="row"><strong>${r.name||'-'}</strong><span class="muted">${r.type||'-'}</span></div><div class="muted">${r.content||'-'}</div><div class="row"><span class="muted">TTL ${r.ttl ?? '-'}</span><span class="muted">${r.proxied ? 'Proxied' : 'DNS only'}</span></div></button>`).join('') || '<div class="item muted">暂无记录</div>';
+    const detail = payload.selectedRecord;
+    document.getElementById('recordDetail').textContent = detail ? `ID: ${detail.id || '-'}
+Name: ${detail.name || '-'}
+Type: ${detail.type || '-'}
+Content: ${detail.content || '-'}
+TTL: ${detail.ttl ?? '-'}
+Proxy: ${detail.proxied ? 'Proxied' : 'DNS only'}` : '选择一条记录查看详情';
+  },
+  setAnalytics(payload){
+    const points = payload.points || [];
+    document.getElementById('analyticsCount').textContent = String(points.length);
+    document.getElementById('analytics').innerHTML = points.map(p => `<div class="item"><div class="row"><strong>${p.date||'-'}</strong><span class="muted">${p.requests} req</span></div><div class="row"><span class="muted">bytes ${p.bytes}</span><span class="muted">cached ${p.cachedRequests}</span></div><div class="row"><span class="muted">threats ${p.threats}</span></div></div>`).join('') || `<div class="item muted">${payload.error || '暂无 analytics 数据'}</div>`;
+  }
 };
 </script>
 </body>
