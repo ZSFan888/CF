@@ -107,7 +107,7 @@ class MainActivity : ComponentActivity() {
             analyticsVm.ui.collect { state ->
                 val pointsJson = state.points.joinToString(prefix = "[", postfix = "]") { "{date:'${escape(it.date)}',requests:${it.requests},bytes:${it.bytes},cachedRequests:${it.cachedRequests},threats:${it.threats}}" }
                 val bars = drawBars(state.points)
-                val js = "window.CFApp?.setAnalytics({points:$pointsJson,error:'${escape(state.error)}',bars:${toJsTemplate(bars)},timeRange:${analyticsVm.ui.value.timeRange}})"
+                val js = "window.CFApp?.setAnalytics({points:$pointsJson,error:'${escape(state.error)}',bars:${toJsTemplate(bars)},timeRange:${state.timeRange}})"
                 binding.webView.evaluateJavascript(js, null)
             }
         }
@@ -159,7 +159,9 @@ class MainActivity : ComponentActivity() {
         dnsVm.setSearchQuery(query)
     }
 
-    fun setAnalyticsTimeRange(range: String) { dnsVm.setSearchQuery(""); analyticsVm.setTimeRange(range.toIntOrNull() ?: 7) }
+    fun setAnalyticsTimeRange(range: String) {
+        analyticsVm.setTimeRange(range.toIntOrNull() ?: 7)
+    }
 
     fun deleteDnsRecord(recordId: String) {
         val token = TokenStore(this).get()
@@ -209,6 +211,14 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             val token = TokenStore(this@MainActivity).get()
             if (token.isNotBlank()) dnsVm.load(token)
+        }
+    }
+    private fun drawBars(points: List<AnalyticsPoint>): String {
+        if (points.isEmpty()) return "<div class=\"item muted\">暂无 analytics 数据</div>"
+        val max = points.maxOfOrNull { it.requests }?.coerceAtLeast(1L) ?: 1L
+        return points.joinToString(separator = "") { point ->
+            val width = ((point.requests.toDouble() / max.toDouble()) * 100.0).toInt().coerceIn(4, 100)
+            "<div class=\"item\"><div class=\"row\"><strong>${point.date}</strong><span class=\"muted\">${point.requests} req</span></div><div style=\"height:10px;background:rgba(0,0,0,.08);border-radius:999px;overflow:hidden;margin-top:8px\"><div style=\"width:${width}%;height:100%;background:#4f46e5\"></div></div><div class=\"row\" style=\"margin-top:8px\"><span class=\"muted\">bytes ${point.bytes}</span><span class=\"muted\">cached ${point.cachedRequests}</span></div></div>"
         }
     }
 

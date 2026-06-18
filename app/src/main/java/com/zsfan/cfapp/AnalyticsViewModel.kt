@@ -21,25 +21,31 @@ class AnalyticsViewModel : ViewModel() {
     private val _ui = MutableStateFlow(AnalyticsUiState())
     val ui: StateFlow<AnalyticsUiState> = _ui
 
+    private var lastToken: String = ""
+    private var lastZoneId: String = ""
+
     fun load(token: String, zoneId: String) {
         if (zoneId.isBlank()) return
+        lastToken = token
+        lastZoneId = zoneId
+        val range = _ui.value.timeRange
         _ui.value = _ui.value.copy(selectedZoneId = zoneId)
         viewModelScope.launch {
             _ui.value = _ui.value.copy(loading = true, error = "")
             runCatching {
                 withContext(Dispatchers.IO) { repo.loadHttpRequestsTrend(token, zoneId) }
             }.onSuccess { points ->
-                _ui.value = AnalyticsUiState(loading = false, points = points, timeRange = 7, selectedZoneId = zoneId)
+                _ui.value = AnalyticsUiState(loading = false, points = points, timeRange = range, selectedZoneId = zoneId)
             }.onFailure { e ->
-                _ui.value = AnalyticsUiState(loading = false, error = e.message ?: "Analytics load failed")
+                _ui.value = _ui.value.copy(loading = false, error = e.message ?: "Analytics load failed")
             }
         }
     }
 
     fun setTimeRange(range: Int) {
         _ui.value = _ui.value.copy(timeRange = range)
-        if (_ui.value.selectedZoneId.isNotBlank()) {
-            load("placeholder_token", _ui.value.selectedZoneId)
+        if (lastToken.isNotBlank() && lastZoneId.isNotBlank()) {
+            load(lastToken, lastZoneId)
         }
     }
 }
