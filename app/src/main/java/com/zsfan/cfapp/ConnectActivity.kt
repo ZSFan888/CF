@@ -19,46 +19,53 @@ class ConnectActivity : AppCompatActivity() {
         binding = ActivityConnectBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val tokenStore = TokenStore(this)
-        val sessionStore = AccountSessionStore(this)
-        binding.tokenInput.setText(tokenStore.get())
+        runCatching {
+            val tokenStore = TokenStore(this)
+            val sessionStore = AccountSessionStore(this)
+            binding.tokenInput.setText(tokenStore.get())
 
-        lifecycleScope.launch {
-            vm.ui.collect { state ->
-                binding.progressBar.visibility = if (state.loading) View.VISIBLE else View.GONE
-                binding.statusText.text = state.message
-                binding.accountContainer.visibility = if (state.accountSummary.isNotBlank()) View.VISIBLE else View.GONE
-                binding.accountSummary.text = state.accountSummary
-                binding.connectBtn.isEnabled = !state.loading
-                binding.clearBtn.isEnabled = !state.loading
+            lifecycleScope.launch {
+                vm.ui.collect { state ->
+                    binding.progressBar.visibility = if (state.loading) View.VISIBLE else View.GONE
+                    binding.statusText.text = state.message
+                    binding.accountContainer.visibility = if (state.accountSummary.isNotBlank()) View.VISIBLE else View.GONE
+                    binding.accountSummary.text = state.accountSummary
+                    binding.connectBtn.isEnabled = !state.loading
+                    binding.clearBtn.isEnabled = !state.loading
+                }
             }
-        }
 
-        binding.connectBtn.setOnClickListener {
-            val token = binding.tokenInput.text?.toString()?.trim().orEmpty()
-            if (token.isBlank()) {
-                binding.tokenLayout.error = "请输入 token"
-                return@setOnClickListener
+            binding.connectBtn.setOnClickListener {
+                val token = binding.tokenInput.text?.toString()?.trim().orEmpty()
+                if (token.isBlank()) {
+                    binding.tokenLayout.error = "请输入 token"
+                    return@setOnClickListener
+                }
+                binding.tokenLayout.error = null
+                vm.connect(
+                    token = token,
+                    tokenStore = tokenStore,
+                    sessionStore = sessionStore,
+                    onSuccess = {
+                        startActivity(Intent(this, MainActivity::class.java))
+                        finish()
+                    },
+                    onError = { Snackbar.make(binding.root, it, Snackbar.LENGTH_LONG).show() }
+                )
             }
-            binding.tokenLayout.error = null
-            vm.connect(
-                token = token,
-                tokenStore = tokenStore,
-                sessionStore = sessionStore,
-                onSuccess = {
-                    startActivity(Intent(this, MainActivity::class.java))
-                    finish()
-                },
-                onError = { Snackbar.make(binding.root, it, Snackbar.LENGTH_LONG).show() }
-            )
-        }
 
-        binding.clearBtn.setOnClickListener {
-            tokenStore.clear()
-            lifecycleScope.launch { sessionStore.clear() }
-            binding.tokenInput.setText("")
-            binding.statusText.text = "已清空当前会话"
-            binding.accountContainer.visibility = View.GONE
+            binding.clearBtn.setOnClickListener {
+                tokenStore.clear()
+                lifecycleScope.launch { sessionStore.clear() }
+                binding.tokenInput.setText("")
+                binding.statusText.text = "已清空当前会话"
+                binding.accountContainer.visibility = View.GONE
+            }
+        }.onFailure { e ->
+            binding.statusText.text = e.message ?: "初始化失败"
+            binding.connectBtn.isEnabled = false
+            binding.clearBtn.isEnabled = false
+            Snackbar.make(binding.root, e.message ?: "初始化失败", Snackbar.LENGTH_LONG).show()
         }
     }
 }
