@@ -180,9 +180,9 @@ class MainActivity : ComponentActivity() {
         require(name.isNotBlank()) { "Name 不能为空" }
         require(content.isNotBlank()) { "Content 不能为空" }
         when (type) {
-            "A" -> require(content.matches(Regex("^((25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(25[0-5]|2[0-4]\d|1?\d?\d)$"))) { "A 记录 Content 必须是 IPv4" }
+            "A" -> require(isIpv4(content)) { "A 记录 Content 必须是 IPv4" }
             "AAAA" -> require(content.contains(":")) { "AAAA 记录 Content 必须是 IPv6" }
-            "CNAME" -> require(!content.matches(Regex("^((25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(25[0-5]|2[0-4]\d|1?\d?\d)$"))) { "CNAME 记录 Content 应为主机名，不应是 IPv4" }
+            "CNAME" -> require(!isIpv4(content)) { "CNAME 记录 Content 应为主机名，不应是 IPv4" }
             "TXT" -> require(content.length <= 2048) { "TXT 内容过长" }
         }
         val proxied = if (obj.has("proxied") && type in setOf("A", "AAAA", "CNAME")) obj.optBoolean("proxied") else null
@@ -222,9 +222,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun isIpv4(value: String): Boolean {
+        val parts = value.split(".")
+        if (parts.size != 4) return false
+        return parts.all { part ->
+            part.isNotBlank() && part.all { it.isDigit() } && part.toIntOrNull() in 0..255
+        }
+    }
+
     private fun escape(value: String): String = value
-        .replace("\", "\\")
+        .replace("\", "\")
         .replace("'", "\'")
 
     private fun toJsTemplate(value: String): String = JSONObject.quote(value)
 }
+
