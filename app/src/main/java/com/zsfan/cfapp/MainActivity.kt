@@ -154,6 +154,13 @@ class MainActivity : ComponentActivity() {
         dnsVm.updateRecord(token, zoneId, recordId, parseDnsInput(payload))
     }
 
+    fun deleteDnsRecord(recordId: String) {
+        val token = TokenStore(this).get()
+        val zoneId = dnsVm.ui.value.selectedZoneId
+        if (token.isBlank() || zoneId.isBlank() || recordId.isBlank()) return
+        dnsVm.deleteRecord(token, zoneId, recordId)
+    }
+
     private fun parseDnsInput(payload: String): DnsRecordInput {
         val obj = JSONObject(payload)
         val type = obj.optString("type").trim().uppercase()
@@ -163,6 +170,12 @@ class MainActivity : ComponentActivity() {
         require(type in setOf("A", "AAAA", "CNAME", "TXT")) { "仅支持 A / AAAA / CNAME / TXT" }
         require(name.isNotBlank()) { "Name 不能为空" }
         require(content.isNotBlank()) { "Content 不能为空" }
+        when (type) {
+            "A" -> require(content.matches(Regex("^((25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(25[0-5]|2[0-4]\d|1?\d?\d)$"))) { "A 记录 Content 必须是 IPv4" }
+            "AAAA" -> require(content.contains(":")) { "AAAA 记录 Content 必须是 IPv6" }
+            "CNAME" -> require(!content.matches(Regex("^((25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(25[0-5]|2[0-4]\d|1?\d?\d)$"))) { "CNAME 记录 Content 应为主机名，不应是 IPv4" }
+            "TXT" -> require(content.length <= 2048) { "TXT 内容过长" }
+        }
         val proxied = if (obj.has("proxied") && type in setOf("A", "AAAA", "CNAME")) obj.optBoolean("proxied") else null
         return DnsRecordInput(type = type, name = name, content = content, ttl = ttl, proxied = proxied)
     }

@@ -23,6 +23,7 @@ class CFBridge(
     @JavascriptInterface fun selectRecord(recordId: String) { activity.runOnUiThread { activity.selectRecord(recordId) } }
     @JavascriptInterface fun createDnsRecord(payload: String) { activity.runOnUiThread { activity.createDnsRecord(payload) } }
     @JavascriptInterface fun updateDnsRecord(recordId: String, payload: String) { activity.runOnUiThread { activity.updateDnsRecord(recordId, payload) } }
+    @JavascriptInterface fun deleteDnsRecord(recordId: String) { activity.runOnUiThread { activity.deleteDnsRecord(recordId) } }
     @JavascriptInterface fun pickFile() { activity.runOnUiThread { picker.launch("*/*") } }
 
     @JavascriptInterface

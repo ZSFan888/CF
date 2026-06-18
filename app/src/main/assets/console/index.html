@@ -62,6 +62,7 @@ small,.muted{color:var(--muted)}.row{display:flex;justify-content:space-between;
         <button class="btn" onclick="window.CFApp.submitCreateRecord()">Add record</button>
         <button class="btn secondary" onclick="window.CFApp.loadSelectedIntoForm()">Load selected</button>
         <button class="btn secondary" onclick="window.CFApp.submitUpdateRecord()">Save edit</button>
+        <button class="btn secondary" onclick="window.CFApp.deleteSelectedRecord()">Delete record</button>
       </div>
       <div class="pre" id="dnsFormHint">支持 A / AAAA / CNAME / TXT。TTL 为 1 时表示 Auto。</div>
     </div>
@@ -107,7 +108,7 @@ Type: ${detail.type || '-'}
 Content: ${detail.content || '-'}
 TTL: ${detail.ttl ?? '-'}
 Proxy: ${detail.proxied ? 'Proxied' : 'DNS only'}` : '选择一条记录查看详情';
-    document.getElementById('dnsFormHint').textContent = payload.error || '支持 A / AAAA / CNAME / TXT。TTL 为 1 时表示 Auto。';
+    document.getElementById('dnsFormHint').textContent = payload.error || '支持 A / AAAA / CNAME / TXT。A 需 IPv4，AAAA 需 IPv6，CNAME 应填主机名。TTL 为 1 时表示 Auto。';
   },
   setAnalytics(payload){
     const points = payload.points || [];

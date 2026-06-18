@@ -107,6 +107,17 @@ class CloudflareRepository {
         }
     }
 
+    fun deleteDnsRecord(token: String, zoneId: String, recordId: String) {
+        val request = Request.Builder()
+            .url("${CloudflareApi.BASE}/zones/$zoneId/dns_records/$recordId")
+            .header("Authorization", "Bearer $token")
+            .delete()
+            .build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) error("Delete DNS failed: HTTP ${response.code}")
+        }
+    }
+
     fun loadHttpRequestsTrend(token: String, zoneId: String): List<AnalyticsPoint> {
         val query = "query(${'$'}zoneTag: String!) { viewer { zones(filter: { zoneTag: ${'$'}zoneTag }) { httpRequests1dGroups(limit: 7, orderBy: [date_ASC]) { dimensions { date } sum { requests bytes cachedRequests threats } } } } }"
         val payload = JSONObject().put("query", query).put("variables", JSONObject().put("zoneTag", zoneId))

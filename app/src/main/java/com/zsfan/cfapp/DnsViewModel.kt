@@ -92,4 +92,20 @@ class DnsViewModel : ViewModel() {
             }
         }
     }
+
+    fun deleteRecord(token: String, zoneId: String, recordId: String) {
+        viewModelScope.launch {
+            _ui.value = _ui.value.copy(loading = true, error = "")
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    repo.deleteDnsRecord(token, zoneId, recordId)
+                    repo.loadDnsRecords(token, zoneId)
+                }
+            }.onSuccess { records ->
+                _ui.value = _ui.value.copy(loading = false, records = records, selectedRecordId = records.firstOrNull()?.id.orEmpty())
+            }.onFailure { e ->
+                _ui.value = _ui.value.copy(loading = false, error = e.message ?: "Delete DNS failed")
+            }
+        }
+    }
 }

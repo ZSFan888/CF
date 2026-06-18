@@ -8,7 +8,7 @@ Cloudflare third-party Android client foundation.
 - Encrypted token storage.
 - Local WebView console shell with restricted asset-only loading.
 - Pages project list, deployment list, and deployment log viewer.
-- Zone list, DNS records, DNS record detail panel, DNS create, and DNS edit.
+- Zone list, DNS records, DNS record detail panel, DNS create, DNS edit, and DNS delete.
 - Analytics preset query using GraphQL.
 
 ## Main files
@@ -21,6 +21,6 @@ Cloudflare third-party Android client foundation.
 - `assets/console/index.html`
 
 ## Next step
-- Add DNS delete flow.
-- Add richer field validation by record type.
-- Replace analytics list with chart rendering.
+- Add richer Pages deployment detail actions.
+- Add analytics chart rendering.
+- Add DNS search and filtering.
