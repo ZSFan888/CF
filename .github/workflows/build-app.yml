@@ -29,10 +29,53 @@ jobs:
           validate-wrappers: false
 
       - name: Build Debug APK
-        run: gradle assembleDebug
+        run: ./gradlew assembleDebug assembleDebugAndroidTest
+
+      - name: Run emulator smoke test and capture adb logs
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: google_apis
+          arch: x86_64
+          profile: pixel_5
+          emulator-boot-timeout: 900
+          disable-animations: true
+          script: |
+            mkdir -p artifacts
+            adb wait-for-device
+            adb shell settings put global window_animation_scale 0 || true
+            adb shell settings put global transition_animation_scale 0 || true
+            adb shell settings put global animator_duration_scale 0 || true
+            adb logcat -c
+            adb logcat -v threadtime > artifacts/adb-logcat.txt &
+            LOGCAT_PID=$!
+            TEST_EXIT=0
+            ./gradlew connectedDebugAndroidTest || TEST_EXIT=$?
+            adb shell dumpsys activity activities > artifacts/activity-dump.txt || true
+            adb shell dumpsys package com.zsfan.cfapp > artifacts/package-dump.txt || true
+            adb shell pidof com.zsfan.cfapp > artifacts/app-pid.txt || true
+            kill $LOGCAT_PID || true
+            wait $LOGCAT_PID || true
+            exit $TEST_EXIT
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
           path: app/build/outputs/apk/debug/*.apk
+
+      - name: Upload android test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-androidTest
+          path: app/build/outputs/apk/androidTest/debug/*.apk
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-smoke-test-reports
+          path: |
+            app/build/reports/androidTests/connected/**
+            app/build/outputs/androidTest-results/connected/**
+            artifacts/**
