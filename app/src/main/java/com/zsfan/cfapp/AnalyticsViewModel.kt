@@ -12,7 +12,8 @@ data class AnalyticsUiState(
     val loading: Boolean = false,
     val error: String = "",
     val points: List<AnalyticsPoint> = emptyList(),
-    val timeRange: Int = 7
+    val timeRange: Int = 7,
+    val selectedZoneId: String = ""
 )
 
 class AnalyticsViewModel : ViewModel() {
@@ -22,12 +23,13 @@ class AnalyticsViewModel : ViewModel() {
 
     fun load(token: String, zoneId: String) {
         if (zoneId.isBlank()) return
+        _ui.value = _ui.value.copy(selectedZoneId = zoneId)
         viewModelScope.launch {
             _ui.value = _ui.value.copy(loading = true, error = "")
             runCatching {
                 withContext(Dispatchers.IO) { repo.loadHttpRequestsTrend(token, zoneId) }
             }.onSuccess { points ->
-                _ui.value = AnalyticsUiState(loading = false, points = points, timeRange = 7)
+                _ui.value = AnalyticsUiState(loading = false, points = points, timeRange = 7, selectedZoneId = zoneId)
             }.onFailure { e ->
                 _ui.value = AnalyticsUiState(loading = false, error = e.message ?: "Analytics load failed")
             }
@@ -37,7 +39,7 @@ class AnalyticsViewModel : ViewModel() {
     fun setTimeRange(range: Int) {
         _ui.value = _ui.value.copy(timeRange = range)
         if (_ui.value.selectedZoneId.isNotBlank()) {
-            load(_ui.value.selectedZoneId, _ui.value.selectedZoneId)
+            load("placeholder_token", _ui.value.selectedZoneId)
         }
     }
 }

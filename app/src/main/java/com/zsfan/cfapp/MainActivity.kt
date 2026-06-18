@@ -106,7 +106,8 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             analyticsVm.ui.collect { state ->
                 val pointsJson = state.points.joinToString(prefix = "[", postfix = "]") { "{date:'${escape(it.date)}',requests:${it.requests},bytes:${it.bytes},cachedRequests:${it.cachedRequests},threats:${it.threats}}" }
-                val js = "window.CFApp?.setAnalytics({points:$pointsJson,error:'${escape(state.error)}'})"
+                val bars = drawBars(state.points)
+                val js = "window.CFApp?.setAnalytics({points:$pointsJson,error:'${escape(state.error)}',bars:${toJsTemplate(bars)},timeRange:${analyticsVm.ui.value.timeRange}})"
                 binding.webView.evaluateJavascript(js, null)
             }
         }
