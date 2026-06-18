@@ -248,13 +248,12 @@ class MainActivity : ComponentActivity() {
         val parts = value.split(".")
         if (parts.size != 4) return false
         return parts.all { part -> part.isNotBlank() && part.all { it.isDigit() } && part.toIntOrNull() in 0..255 }
-    }
-    private fun escape(value: String): String {
+    }    private fun escape(value: String): String {
         val sb = StringBuilder(value.length)
         value.forEach { ch ->
-            when (ch) {
-                '\' -> sb.append("\")
-                ''' -> sb.append("\'")
+            when (ch.code) {
+                92 -> sb.append("\")
+                39 -> sb.append("\'")
                 else -> sb.append(ch)
             }
         }
