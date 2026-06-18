@@ -248,17 +248,25 @@ class MainActivity : ComponentActivity() {
         val parts = value.split(".")
         if (parts.size != 4) return false
         return parts.all { part -> part.isNotBlank() && part.all { it.isDigit() } && part.toIntOrNull() in 0..255 }
-    }    private fun escape(value: String): String {
-        val sb = StringBuilder(value.length)
-        value.forEach { ch ->
-            when (ch.code) {
-                92 -> sb.append("\")
-                39 -> sb.append("\'")
-                else -> sb.append(ch)
+    }
+    private fun escape(value: String): String {
+        return buildString(value.length) {
+            value.forEach { ch ->
+                when (ch.code) {
+                    92 -> {
+                        append(92.toChar())
+                        append(92.toChar())
+                    }
+                    39 -> {
+                        append(92.toChar())
+                        append(39.toChar())
+                    }
+                    else -> append(ch)
+                }
             }
         }
-        return sb.toString()
     }
 
     private fun toJsTemplate(value: String): String = JSONObject.quote(value)
 }
+
