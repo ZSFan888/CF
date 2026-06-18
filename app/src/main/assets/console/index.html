@@ -10,8 +10,8 @@
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text)}
 .wrap{padding:20px;display:grid;gap:16px}.card{border:1px solid var(--line);background:var(--surface);border-radius:16px;padding:16px}.btn{border:1px solid var(--line);background:var(--accent);color:var(--bg);border-radius:999px;padding:10px 14px}.btn.secondary{background:transparent;color:var(--text)}
 small,.muted{color:var(--muted)}.row{display:flex;justify-content:space-between;gap:12px;align-items:center}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.list{display:grid;gap:10px;margin-top:12px}.item{padding:12px;border:1px solid var(--line);border-radius:14px;background:rgba(0,0,0,.02);text-align:left}[data-theme=dark] .item{background:rgba(255,255,255,.03)}
-.select{width:100%;margin-top:12px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--text)}.pre{white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.5;border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:12px;background:rgba(0,0,0,.02)}
-[data-theme=dark] .pre{background:rgba(255,255,255,.03)}
+.select,.input,.textarea{width:100%;margin-top:12px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--text)}.textarea{min-height:88px;resize:vertical}.pre{white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.5;border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:12px;background:rgba(0,0,0,.02)}[data-theme=dark] .pre{background:rgba(255,255,255,.03)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 </style>
 </head>
 <body>
@@ -25,7 +25,7 @@ small,.muted{color:var(--muted)}.row{display:flex;justify-content:space-between;
       <div class="row" style="margin-top:10px"><span>Token status</span><span id="tokenStatus" class="muted">unknown</span></div>
       <div class="row" style="margin-top:10px"><span>Account</span><span id="accountName" class="muted">none</span></div>
       <div class="row" style="margin-top:10px"><span>Account ID</span><span id="accountId" class="mono muted">-</span></div>
-      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+      <div class="actions">
         <button class="btn" onclick="window.CFBridge?.requestTheme()">Sync theme</button>
         <button class="btn secondary" onclick="window.CFBridge?.openConnect()">Reconnect</button>
       </div>
@@ -50,11 +50,28 @@ small,.muted{color:var(--muted)}.row{display:flex;justify-content:space-between;
       <div class="pre" id="recordDetail">选择一条记录查看详情</div>
     </div>
     <div class="card">
+      <div class="row"><span>DNS Form</span><strong id="dnsFormMode">Create</strong></div>
+      <select id="dnsType" class="select">
+        <option>A</option><option>AAAA</option><option>CNAME</option><option>TXT</option>
+      </select>
+      <input id="dnsName" class="input" placeholder="Name，例如 blog 或 @">
+      <textarea id="dnsContent" class="textarea" placeholder="Content，例如 IP、目标域名或 TXT 文本"></textarea>
+      <input id="dnsTtl" class="input" type="number" min="1" value="1" placeholder="TTL，1 表示 Auto">
+      <label class="muted" style="display:flex;gap:8px;align-items:center;margin-top:12px"><input id="dnsProxied" type="checkbox"> Proxied（仅 A / AAAA / CNAME）</label>
+      <div class="actions">
+        <button class="btn" onclick="window.CFApp.submitCreateRecord()">Add record</button>
+        <button class="btn secondary" onclick="window.CFApp.loadSelectedIntoForm()">Load selected</button>
+        <button class="btn secondary" onclick="window.CFApp.submitUpdateRecord()">Save edit</button>
+      </div>
+      <div class="pre" id="dnsFormHint">支持 A / AAAA / CNAME / TXT。TTL 为 1 时表示 Auto。</div>
+    </div>
+    <div class="card">
       <div class="row"><span>Analytics</span><strong id="analyticsCount">0</strong></div>
       <div id="analytics" class="list"></div>
     </div>
   </div>
 <script>
+window.__selectedRecord = null;
 window.CFApp = {
   setTheme(theme){ document.documentElement.setAttribute('data-theme', theme); },
   setSession(session){
@@ -75,6 +92,7 @@ window.CFApp = {
   setDns(payload){
     const zones = payload.zones || [];
     const records = payload.records || [];
+    window.__selectedRecord = payload.selectedRecord || null;
     document.getElementById('zoneCount').textContent = String(zones.length);
     document.getElementById('recordCount').textContent = String(records.length);
     const select = document.getElementById('zoneSelect');
@@ -89,11 +107,46 @@ Type: ${detail.type || '-'}
 Content: ${detail.content || '-'}
 TTL: ${detail.ttl ?? '-'}
 Proxy: ${detail.proxied ? 'Proxied' : 'DNS only'}` : '选择一条记录查看详情';
+    document.getElementById('dnsFormHint').textContent = payload.error || '支持 A / AAAA / CNAME / TXT。TTL 为 1 时表示 Auto。';
   },
   setAnalytics(payload){
     const points = payload.points || [];
     document.getElementById('analyticsCount').textContent = String(points.length);
     document.getElementById('analytics').innerHTML = points.map(p => `<div class="item"><div class="row"><strong>${p.date||'-'}</strong><span class="muted">${p.requests} req</span></div><div class="row"><span class="muted">bytes ${p.bytes}</span><span class="muted">cached ${p.cachedRequests}</span></div><div class="row"><span class="muted">threats ${p.threats}</span></div></div>`).join('') || `<div class="item muted">${payload.error || '暂无 analytics 数据'}</div>`;
+  },
+  loadSelectedIntoForm(){
+    const r = window.__selectedRecord;
+    if(!r){ document.getElementById('dnsFormHint').textContent = '先选择一条记录'; return; }
+    document.getElementById('dnsFormMode').textContent = 'Edit';
+    document.getElementById('dnsType').value = r.type || 'A';
+    document.getElementById('dnsName').value = r.name || '';
+    document.getElementById('dnsContent').value = r.content || '';
+    document.getElementById('dnsTtl').value = r.ttl || 1;
+    document.getElementById('dnsProxied').checked = !!r.proxied;
+    document.getElementById('dnsFormHint').textContent = '已载入当前选中记录，可直接保存修改。';
+  },
+  collectForm(){
+    const type = document.getElementById('dnsType').value;
+    const payload = {
+      type,
+      name: document.getElementById('dnsName').value.trim(),
+      content: document.getElementById('dnsContent').value.trim(),
+      ttl: Number(document.getElementById('dnsTtl').value || 1),
+    };
+    if(['A','AAAA','CNAME'].includes(type)) payload.proxied = document.getElementById('dnsProxied').checked;
+    return payload;
+  },
+  submitCreateRecord(){
+    document.getElementById('dnsFormMode').textContent = 'Create';
+    const payload = window.CFApp.collectForm();
+    window.CFBridge?.createDnsRecord(JSON.stringify(payload));
+  },
+  submitUpdateRecord(){
+    const r = window.__selectedRecord;
+    if(!r || !r.id){ document.getElementById('dnsFormHint').textContent = '先选择一条记录再编辑。'; return; }
+    document.getElementById('dnsFormMode').textContent = 'Edit';
+    const payload = window.CFApp.collectForm();
+    window.CFBridge?.updateDnsRecord(String(r.id), JSON.stringify(payload));
   }
 };
 </script>

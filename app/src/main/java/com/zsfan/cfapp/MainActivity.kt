@@ -17,6 +17,7 @@ import androidx.lifecycle.lifecycleScope
 import com.zsfan.cfapp.databinding.ActivityMainBinding
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 class MainActivity : ComponentActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -52,20 +53,12 @@ class MainActivity : ComponentActivity() {
         }
         web.addJavascriptInterface(CFBridge(this, web, picker), "CFBridge")
         web.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                val url = request.url.toString()
-                return !url.startsWith("file:///android_asset/")
-            }
-
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = !request.url.toString().startsWith("file:///android_asset/")
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
                 val url = request.url.toString()
                 return if (url.startsWith("file:///android_asset/")) null else WebResourceResponse("text/plain", "utf-8", 403, "Blocked", mapOf(), null)
             }
-
-            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                binding.progressBar.isVisible = true
-            }
-
+            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) { binding.progressBar.isVisible = true }
             override fun onPageFinished(view: WebView?, url: String?) {
                 binding.progressBar.isVisible = false
                 syncSessionIntoConsole()
@@ -99,11 +92,13 @@ class MainActivity : ComponentActivity() {
 
         lifecycleScope.launch {
             dnsVm.ui.collect { state ->
+                binding.progressBar.isVisible = state.loading
+                if (state.error.isNotBlank()) binding.errorMessage.text = state.error
                 val zonesJson = state.zones.joinToString(prefix = "[", postfix = "]") { "{id:'${escape(it.id.orEmpty())}',name:'${escape(it.name.orEmpty())}',status:'${escape(it.status.orEmpty())}'}" }
                 val recordsJson = state.records.joinToString(prefix = "[", postfix = "]") { "{id:'${escape(it.id.orEmpty())}',name:'${escape(it.name.orEmpty())}',type:'${escape(it.type.orEmpty())}',content:'${escape(it.content.orEmpty())}',proxied:${it.proxied == true},ttl:${it.ttl ?: 0}}" }
                 val selected = state.selectedRecord
                 val selectedJson = if (selected == null) "null" else "{id:'${escape(selected.id.orEmpty())}',name:'${escape(selected.name.orEmpty())}',type:'${escape(selected.type.orEmpty())}',content:'${escape(selected.content.orEmpty())}',proxied:${selected.proxied == true},ttl:${selected.ttl ?: 0}}"
-                val js = "window.CFApp?.setDns({zones:$zonesJson,records:$recordsJson,selectedZoneId:'${escape(state.selectedZoneId)}',selectedRecord:$selectedJson})"
+                val js = "window.CFApp?.setDns({zones:$zonesJson,records:$recordsJson,selectedZoneId:'${escape(state.selectedZoneId)}',selectedRecord:$selectedJson,error:'${escape(state.error)}'})"
                 binding.webView.evaluateJavascript(js, null)
             }
         }
@@ -117,9 +112,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    fun openConnect() {
-        startActivity(Intent(this, ConnectActivity::class.java))
-    }
+    fun openConnect() { startActivity(Intent(this, ConnectActivity::class.java)) }
 
     fun selectProject(projectName: String) {
         val token = TokenStore(this).get()
@@ -134,9 +127,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             val session = AccountSessionStore(this@MainActivity).state.first()
             val projectName = pagesVm.ui.value.selectedProject
-            if (token.isNotBlank() && session.accountId.isNotBlank() && projectName.isNotBlank() && deploymentId.isNotBlank()) {
-                pagesVm.loadLogs(token, session.accountId, projectName, deploymentId)
-            }
+            if (token.isNotBlank() && session.accountId.isNotBlank() && projectName.isNotBlank() && deploymentId.isNotBlank()) pagesVm.loadLogs(token, session.accountId, projectName, deploymentId)
         }
     }
 
@@ -147,13 +138,36 @@ class MainActivity : ComponentActivity() {
         analyticsVm.load(token, zoneId)
     }
 
-    fun selectRecord(recordId: String) {
-        dnsVm.selectRecord(recordId)
+    fun selectRecord(recordId: String) { dnsVm.selectRecord(recordId) }
+
+    fun createDnsRecord(payload: String) {
+        val token = TokenStore(this).get()
+        val zoneId = dnsVm.ui.value.selectedZoneId
+        if (token.isBlank() || zoneId.isBlank()) return
+        dnsVm.createRecord(token, zoneId, parseDnsInput(payload))
     }
 
-    private fun loadConsole() {
-        binding.webView.loadUrl("file:///android_asset/console/index.html")
+    fun updateDnsRecord(recordId: String, payload: String) {
+        val token = TokenStore(this).get()
+        val zoneId = dnsVm.ui.value.selectedZoneId
+        if (token.isBlank() || zoneId.isBlank() || recordId.isBlank()) return
+        dnsVm.updateRecord(token, zoneId, recordId, parseDnsInput(payload))
     }
+
+    private fun parseDnsInput(payload: String): DnsRecordInput {
+        val obj = JSONObject(payload)
+        val type = obj.optString("type").trim().uppercase()
+        val name = obj.optString("name").trim()
+        val content = obj.optString("content").trim()
+        val ttl = obj.optInt("ttl", 1).coerceAtLeast(1)
+        require(type in setOf("A", "AAAA", "CNAME", "TXT")) { "仅支持 A / AAAA / CNAME / TXT" }
+        require(name.isNotBlank()) { "Name 不能为空" }
+        require(content.isNotBlank()) { "Content 不能为空" }
+        val proxied = if (obj.has("proxied") && type in setOf("A", "AAAA", "CNAME")) obj.optBoolean("proxied") else null
+        return DnsRecordInput(type = type, name = name, content = content, ttl = ttl, proxied = proxied)
+    }
+
+    private fun loadConsole() { binding.webView.loadUrl("file:///android_asset/console/index.html") }
 
     private fun syncSessionIntoConsole() {
         lifecycleScope.launch {
@@ -175,11 +189,6 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             val token = TokenStore(this@MainActivity).get()
             if (token.isNotBlank()) dnsVm.load(token)
-        }
-        lifecycleScope.launch {
-            val token = TokenStore(this@MainActivity).get()
-            val zoneId = dnsVm.ui.value.selectedZoneId
-            if (token.isNotBlank() && zoneId.isNotBlank()) analyticsVm.load(token, zoneId)
         }
     }
 

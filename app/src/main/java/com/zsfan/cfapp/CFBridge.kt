@@ -16,35 +16,14 @@ class CFBridge(
         activity.runOnUiThread { webView.evaluateJavascript("window.CFApp?.setTheme('$theme')", null) }
     }
 
-    @JavascriptInterface
-    fun openConnect() {
-        activity.runOnUiThread { activity.openConnect() }
-    }
-
-    @JavascriptInterface
-    fun selectProject(projectName: String) {
-        activity.runOnUiThread { activity.selectProject(projectName) }
-    }
-
-    @JavascriptInterface
-    fun selectDeployment(deploymentId: String) {
-        activity.runOnUiThread { activity.selectDeployment(deploymentId) }
-    }
-
-    @JavascriptInterface
-    fun selectZone(zoneId: String) {
-        activity.runOnUiThread { activity.selectZone(zoneId) }
-    }
-
-    @JavascriptInterface
-    fun selectRecord(recordId: String) {
-        activity.runOnUiThread { activity.selectRecord(recordId) }
-    }
-
-    @JavascriptInterface
-    fun pickFile() {
-        activity.runOnUiThread { picker.launch("*/*") }
-    }
+    @JavascriptInterface fun openConnect() { activity.runOnUiThread { activity.openConnect() } }
+    @JavascriptInterface fun selectProject(projectName: String) { activity.runOnUiThread { activity.selectProject(projectName) } }
+    @JavascriptInterface fun selectDeployment(deploymentId: String) { activity.runOnUiThread { activity.selectDeployment(deploymentId) } }
+    @JavascriptInterface fun selectZone(zoneId: String) { activity.runOnUiThread { activity.selectZone(zoneId) } }
+    @JavascriptInterface fun selectRecord(recordId: String) { activity.runOnUiThread { activity.selectRecord(recordId) } }
+    @JavascriptInterface fun createDnsRecord(payload: String) { activity.runOnUiThread { activity.createDnsRecord(payload) } }
+    @JavascriptInterface fun updateDnsRecord(recordId: String, payload: String) { activity.runOnUiThread { activity.updateDnsRecord(recordId, payload) } }
+    @JavascriptInterface fun pickFile() { activity.runOnUiThread { picker.launch("*/*") } }
 
     @JavascriptInterface
     fun shareText(text: String) {

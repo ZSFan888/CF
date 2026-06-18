@@ -20,6 +20,10 @@ class CloudflareRepository {
     private val dnsAdapter = moshi.adapter(DnsRecordsEnvelope::class.java)
 
     private fun get(url: String, token: String) = Request.Builder().url(url).header("Authorization", "Bearer $token").get().build()
+    private fun jsonRequest(url: String, token: String, method: String, payload: JSONObject): Request {
+        val body = payload.toString().toRequestBody("application/json".toMediaType())
+        return Request.Builder().url(url).header("Authorization", "Bearer $token").method(method, body).build()
+    }
 
     fun verifyToken(token: String): VerifyResult {
         client.newCall(get(CloudflareApi.VERIFY, token)).execute().use { response ->
@@ -85,37 +89,39 @@ class CloudflareRepository {
         }
     }
 
+    fun createDnsRecord(token: String, zoneId: String, input: DnsRecordInput) {
+        val payload = JSONObject().put("type", input.type).put("name", input.name).put("content", input.content).put("ttl", input.ttl)
+        if (input.proxied != null) payload.put("proxied", input.proxied)
+        val request = jsonRequest("${CloudflareApi.BASE}/zones/$zoneId/dns_records", token, "POST", payload)
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) error("Create DNS failed: HTTP ${response.code}")
+        }
+    }
+
+    fun updateDnsRecord(token: String, zoneId: String, recordId: String, input: DnsRecordInput) {
+        val payload = JSONObject().put("type", input.type).put("name", input.name).put("content", input.content).put("ttl", input.ttl)
+        if (input.proxied != null) payload.put("proxied", input.proxied)
+        val request = jsonRequest("${CloudflareApi.BASE}/zones/$zoneId/dns_records/$recordId", token, "PATCH", payload)
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) error("Update DNS failed: HTTP ${response.code}")
+        }
+    }
+
     fun loadHttpRequestsTrend(token: String, zoneId: String): List<AnalyticsPoint> {
         val query = "query(${'$'}zoneTag: String!) { viewer { zones(filter: { zoneTag: ${'$'}zoneTag }) { httpRequests1dGroups(limit: 7, orderBy: [date_ASC]) { dimensions { date } sum { requests bytes cachedRequests threats } } } } }"
         val payload = JSONObject().put("query", query).put("variables", JSONObject().put("zoneTag", zoneId))
-        val request = Request.Builder()
-            .url(CloudflareApi.GRAPHQL)
-            .header("Authorization", "Bearer $token")
-            .post(payload.toString().toRequestBody("application/json".toMediaType()))
-            .build()
+        val request = Request.Builder().url(CloudflareApi.GRAPHQL).header("Authorization", "Bearer $token").post(payload.toString().toRequestBody("application/json".toMediaType())).build()
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) error("Analytics failed: HTTP ${response.code}")
             val body = JSONObject(response.body?.string().orEmpty())
             if (body.has("errors")) error(body.getJSONArray("errors").optJSONObject(0)?.optString("message") ?: "Analytics query failed")
-            val groups = body.optJSONObject("data")
-                ?.optJSONObject("viewer")
-                ?.optJSONArray("zones")
-                ?.optJSONObject(0)
-                ?.optJSONArray("httpRequests1dGroups") ?: JSONArray()
+            val groups = body.optJSONObject("data")?.optJSONObject("viewer")?.optJSONArray("zones")?.optJSONObject(0)?.optJSONArray("httpRequests1dGroups") ?: JSONArray()
             return buildList {
                 for (i in 0 until groups.length()) {
                     val item = groups.optJSONObject(i) ?: continue
                     val dimensions = item.optJSONObject("dimensions")
                     val sum = item.optJSONObject("sum")
-                    add(
-                        AnalyticsPoint(
-                            date = dimensions?.optString("date").orEmpty(),
-                            requests = sum?.optLong("requests") ?: 0L,
-                            bytes = sum?.optLong("bytes") ?: 0L,
-                            cachedRequests = sum?.optLong("cachedRequests") ?: 0L,
-                            threats = sum?.optLong("threats") ?: 0L
-                        )
-                    )
+                    add(AnalyticsPoint(dimensions?.optString("date").orEmpty(), sum?.optLong("requests") ?: 0L, sum?.optLong("bytes") ?: 0L, sum?.optLong("cachedRequests") ?: 0L, sum?.optLong("threats") ?: 0L))
                 }
             }
         }
