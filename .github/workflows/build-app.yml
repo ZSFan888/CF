@@ -29,7 +29,7 @@ jobs:
           validate-wrappers: false
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug assembleDebugAndroidTest
+        run: gradle assembleDebug assembleDebugAndroidTest --stacktrace
 
       - name: Run emulator smoke test and capture adb logs
         uses: ReactiveCircus/android-emulator-runner@v2
@@ -50,7 +50,7 @@ jobs:
             adb logcat -v threadtime > artifacts/adb-logcat.txt &
             LOGCAT_PID=$!
             TEST_EXIT=0
-            ./gradlew connectedDebugAndroidTest || TEST_EXIT=$?
+            gradle connectedDebugAndroidTest --stacktrace || TEST_EXIT=$?
             adb shell dumpsys activity activities > artifacts/activity-dump.txt || true
             adb shell dumpsys package com.zsfan.cfapp > artifacts/package-dump.txt || true
             adb shell pidof com.zsfan.cfapp > artifacts/app-pid.txt || true
@@ -59,12 +59,14 @@ jobs:
             exit $TEST_EXIT
 
       - name: Upload APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
           path: app/build/outputs/apk/debug/*.apk
 
       - name: Upload android test APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-androidTest
