@@ -28,8 +28,24 @@ jobs:
           gradle-version: '8.10'
           validate-wrappers: false
 
-      - name: Build Debug APK
+      - name: Build Debug APKs
         run: gradle assembleDebug assembleDebugAndroidTest --stacktrace
+
+      - name: Upload APK for user download
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-for-user
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Upload androidTest APK for user download
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-androidTest-for-user
+          path: app/build/outputs/apk/androidTest/debug/*.apk
+          if-no-files-found: error
 
       - name: Run emulator smoke test and capture adb logs
         uses: ReactiveCircus/android-emulator-runner@v2
@@ -70,20 +86,6 @@ jobs:
             kill $LOGCAT_PID || true
             wait $LOGCAT_PID || true
             exit $TEST_EXIT
-
-      - name: Upload APK
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug
-          path: app/build/outputs/apk/debug/*.apk
-
-      - name: Upload android test APK
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug-androidTest
-          path: app/build/outputs/apk/androidTest/debug/*.apk
 
       - name: Upload test reports
         if: always()
