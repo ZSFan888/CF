@@ -42,6 +42,12 @@ jobs:
           disable-animations: true
           script: |
             mkdir -p artifacts
+
+            # Show gradle/java environment
+            command -v gradle || echo "gradle not found in PATH"
+            gradle --version || echo "gradle --version failed"
+            java -version || echo "java not found"
+
             adb wait-for-device
             adb shell settings put global window_animation_scale 0 || true
             adb shell settings put global transition_animation_scale 0 || true
@@ -50,10 +56,17 @@ jobs:
             adb logcat -v threadtime > artifacts/adb-logcat.txt &
             LOGCAT_PID=$!
             TEST_EXIT=0
+
+            # Install test app explicitly
+            gradle installDebug installDebugAndroidTest --stacktrace || echo "gradle install failed"
+
+            # Run connected tests
             gradle connectedDebugAndroidTest --stacktrace || TEST_EXIT=$?
+
             adb shell dumpsys activity activities > artifacts/activity-dump.txt || true
             adb shell dumpsys package com.zsfan.cfapp > artifacts/package-dump.txt || true
             adb shell pidof com.zsfan.cfapp > artifacts/app-pid.txt || true
+
             kill $LOGCAT_PID || true
             wait $LOGCAT_PID || true
             exit $TEST_EXIT
